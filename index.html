@@ -66,16 +66,28 @@ footer{border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font
 var LANES=[["todo","Today"],["pulse","CrossFit Pulse"],["prog","Programming"]];
 var lane=(location.hash||"#todo").slice(1); if(!LANES.some(function(l){return l[0]===lane}))lane="todo";
 var KEYSTORE="cc-pass", FLAGS="cc-flags-", MINE="cc-mine-";
-var FEED=null, err=null, busy=false;
+var FEED=null, err=null, busy=false, hidden=0;
 function $(id){return document.getElementById(id)}
 function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function lsGet(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(x){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(x){}}
 function flags(){return lsGet(FLAGS+lane,{})}
-function setFlag(k,n,v){var f=flags();var o=f[k]||(f[k]={});if(v)o[n]=1;else delete o[n];
+// Fingerprint of the athlete's own words. A dismissal is recorded against this,
+// so if the same thread later carries a DIFFERENT message it comes back instead
+// of inheriting the old dismissal. Two items can share a key (two open notes on
+// one athlete with only a profile link); the fingerprint separates them.
+function qf(it){return String(it.q||it.headline||it.who||"")
+  .toLowerCase().replace(/[^a-z0-9]+/g," ").trim().slice(0,80)}
+function setFlag(k,n,v,it){var f=flags();var o=f[k]||(f[k]={});
+ if(v){o[n]=1; if(n==="done"&&it)o.q=qf(it);} else {delete o[n]; if(n==="done")delete o.q;}
  if(!Object.keys(o).length)delete f[k];lsSet(FLAGS+lane,f);}
-function keyOf(it){return it.url||it.k||it.who||it.headline}
+// hidden only when the key matches AND the words are the ones that were cleared
+function isDone(it){var f=flags()[keyOf(it)]||{};
+ if(!f.done)return false;
+ if(f.q===undefined)return true;
+ return f.q===qf(it);}
+function keyOf(it){return it.k||it.url||it.who||it.headline}
 
 async function decrypt(blob,phrase){
   var b=function(s){var r=atob(s),a=new Uint8Array(r.length);
@@ -105,7 +117,7 @@ async function load(){
 
 function item(it){
   var k=keyOf(it),f=flags()[k]||{};
-  if(f.done||it.done)return "";
+  if(isDone(it))return "";
   var h='<li class="item '+e(it.tone||it.c||"info")+'" data-k="'+e(k)+'" data-saved="'+(f.saved?1:0)+'">';
   h+='<button class="b-star" data-a="saved" title="Read later">&#9733;</button>';
   h+='<button class="b-done" data-a="done" title="Clear">&#10003;</button>';
@@ -165,13 +177,15 @@ function draw(){
          +'<div class="what">'+e(m.who)+'</div></li>'});
       h+='</ul>';
     }
-    var saved=[];(FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){
-      var f=flags()[keyOf(i)]||{};if(f.saved&&!f.done)saved.push(i)})});
+    var saved=[];hidden=0;(FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){
+      var f=flags()[keyOf(i)]||{};
+      if(isDone(i)){hidden++;return}
+      if(f.saved)saved.push(i)})});
     if(saved.length){h+='<h2>Read later <em>'+saved.length+'</em></h2><ul>';
       saved.forEach(function(i){h+=item(i)});h+='</ul>'}
     (FEED.sections||[]).forEach(function(s){
       var body="";(s.items||[]).forEach(function(i){
-        var f=flags()[keyOf(i)]||{};if(f.saved)return;body+=item(i)});
+        var f=flags()[keyOf(i)]||{};if(f.saved&&!isDone(i))return;body+=item(i)});
       h+='<h2>'+e(s.title||s.h||"")+(s.count_label?' <em>'+e(s.count_label)+'</em>':'')
         +(s.em?' <em>'+e(s.em)+'</em>':'')+'</h2>';
       if(s.note)h+='<div class="note">'+e(s.note)+'</div>';
@@ -179,13 +193,19 @@ function draw(){
     if(FEED.failures&&FEED.failures.length){h+='<h2>Sources that failed <em>'+FEED.failures.length+'</em></h2><ul>';
       FEED.failures.forEach(function(f){h+='<li class="item warn"><div class="what">'+e(f)+'</div></li>'});h+='</ul>'}
   }
-  h+='<footer>Updates on its own every 3 hours. Ticks and stars are saved in this browser.</footer></div>';
+  if(FEED&&hidden)h+='<div class="note">'+hidden+' cleared and staying gone. '
+    +'<button id="unhide" style="border:1px solid var(--line);background:none;color:var(--accent);'
+    +'border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit;font-size:13px">Show them</button></div>';
+  h+='<footer>Updates on its own every 3 hours. Cleared items stay cleared until the message itself changes.</footer></div>';
   $("app").innerHTML=h;
 }
 
 document.addEventListener("click",function(ev){
   var t=ev.target;
   if(t.id==="refresh"){load();return}
+  if(t.id==="unhide"){var f=flags();Object.keys(f).forEach(function(k){
+    delete f[k].done;delete f[k].q;if(!Object.keys(f[k]).length)delete f[k]});
+    lsSet(FLAGS+lane,f);draw();return}
   if(t.id==="ab"){var v=$("ai").value.trim();if(!v)return;
     var m=lsGet(MINE+lane,(FEED&&FEED.mine)||[]);
     m.push({k:"mine-"+Date.now(),who:v});lsSet(MINE+lane,m);$("ai").value="";draw();return}
@@ -193,7 +213,11 @@ document.addEventListener("click",function(ev){
   var li=t.closest&&t.closest("li.item");
   if(li&&t.dataset&&t.dataset.a){
     var k=li.getAttribute("data-k"),f=flags()[k]||{};
-    setFlag(k,t.dataset.a,!f[t.dataset.a]);draw();return}
+    var src=null;(FEED&&FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){
+      if(keyOf(i)===k)src=i})});
+    if(!src){var mm=lsGet(MINE+lane,(FEED&&FEED.mine)||[]);
+      mm.forEach(function(m){if(m.k===k)src=m})}
+    setFlag(k,t.dataset.a,!f[t.dataset.a],src);draw();return}
 });
 window.addEventListener("hashchange",function(){
   var l=location.hash.slice(1);
