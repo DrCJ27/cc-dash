@@ -102,17 +102,35 @@ function fp(it){
 // so if the same thread later carries a DIFFERENT message it comes back instead
 // of inheriting the old dismissal. Two items can share a key (two open notes on
 // one athlete with only a profile link); the fingerprint separates them.
+function fmtDate(iso){
+  if(!iso)return "";
+  var p=String(iso).split("-"); if(p.length!==3)return iso;
+  var M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var d=new Date(+p[0],+p[1]-1,+p[2]);
+  var days=Math.floor((Date.now()-d.getTime())/86400000);
+  var lbl=M[+p[1]-1]+" "+(+p[2]);
+  if(days>0)lbl+=" ("+days+"d)";
+  return lbl;
+}
 function qf(it){return String(it.q||it.headline||it.who||"")
   .toLowerCase().replace(/[^a-z0-9]+/g," ").trim().slice(0,80)}
 function setFlag(k,n,v,it){var f=flags();var id=it?fp(it):k;var o=f[id]||(f[id]={});
- if(v){o[n]=1; if(n==="done"&&it)o.q=qf(it);} else {delete o[n]; if(n==="done")delete o.q;}
+ if(v){o[n]=1; if(n==="done"&&it)o.at=(it.latest||it.since||"");}
+ else {delete o[n]; if(n==="done")delete o.at;}
  if(!Object.keys(o).length)delete f[id];lsSet(FLAGS+lane,f);}
 function flagsFor(it){return flags()[fp(it)]||{}}
 // hidden only when the key matches AND the words are the ones that were cleared
+// Cleared means CLEARED. It comes back only when the topic itself moves --
+// a newer dated event than the one that was cleared. Reworded summaries and
+// requoted lines do NOT bring it back; that twitchiness is what kept dragging
+// Mel's GHD note and Asher's push question back onto the list.
 function isDone(it){var f=flagsFor(it);
  if(!f.done)return false;
- if(f.q===undefined)return true;
- return f.q===qf(it);}
+ if(!f.at)return true;                       // cleared before dates existed
+ var cur=it.latest||it.since||"";
+ if(!cur)return true;                        // undated -> stays cleared
+ return cur<=f.at;                           // newer activity -> resurface
+}
 function keyOf(it){return it.k||it.url||it.who||it.headline}
 
 async function decrypt(blob,phrase){
@@ -152,7 +170,10 @@ function item(it){
   pl.forEach(function(p){if(typeof p==="string")return;
     var t=p.tone||p[0],x=p.text||p[1];
     if(x!==undefined)h+='<span class="pill '+e(t)+'">'+e(x)+'</span>'});
-  h+='<span class="age">'+e(it.when||"")+'</span></div>';
+  var since=it.since?fmtDate(it.since):"";
+  var extra=e(it.when||it.age||"");
+  h+='<span class="age">'+(since?'since '+since:"")+'</span></div>';
+  if(extra&&extra!==since)h+='<div class="age" style="margin-top:-2px">'+extra+'</div>';
   if(it.headline||it.url){var hd=e(it.headline||it.url);
     if(it.url)hd='<a href="'+e(it.url)+'" target="_blank" rel="noopener">'+hd+'</a>';
     h+='<div class="what"><strong>'+hd+'</strong></div>';
