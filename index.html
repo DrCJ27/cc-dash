@@ -73,7 +73,7 @@ background:var(--surface-2);cursor:pointer;color:var(--muted);font-size:13px;fon
 .pill{font:600 10px/1 Oswald,sans-serif;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:5px}
 .pill.crit{background:var(--crit-soft);color:var(--crit)}.pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.info{background:var(--surface-2);color:var(--cyan)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
-.what{color:var(--ink-2);font-size:15px}
+.what{color:var(--ink-2);font-size:15px}.what.clip .rest{display:none}.what.clip.open .rest{display:inline}.b-more{background:none;border:0;color:var(--cyan,#76D7EA);font:inherit;font-size:13px;padding:0 0 0 6px;cursor:pointer}
 .what a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
 .what a:hover{color:var(--accent);border-bottom-color:var(--accent)}
 blockquote{margin:4px 0 0;padding:.3rem 0 .3rem .7rem;border-left:2px solid var(--line);color:var(--ink-2);font-size:14.5px}
@@ -302,6 +302,17 @@ async function load(){
   if(lane==="hq"||flagLane()==="todo"){syncPull();loadGlance()}
 }
 
+function clipWhat(txt){
+  // One card = one decision. Anything past the first ~200 chars folds behind "more"
+  // (CJ, 2026-11-04 00:50: a 400-word reminder card was "terrible and unusable").
+  var LIM=200;
+  if(txt.length<=LIM+40)return '<div class="what">'+e(txt)+'</div>';
+  var cut=txt.slice(0,LIM),m=cut.lastIndexOf('. ');
+  if(m>80)cut=txt.slice(0,m+1);else{var sp=cut.lastIndexOf(' ');if(sp>80)cut=cut.slice(0,sp);}
+  var rest=txt.slice(cut.length);
+  return '<div class="what clip">'+e(cut)+'<span class="rest">'+e(rest)+'</span>'
+    +'<button class="b-more" data-a="more">more</button></div>';
+}
 function item(it){
   var k=keyOf(it),f=flagsFor(it);
   if(isDone(it))return "";
@@ -322,7 +333,7 @@ function item(it){
     h+='<div class="what"><strong>'+hd+'</strong></div>';
   }
   if(it.q)h+='<blockquote>'+e(it.q)+'</blockquote>';
-  if(it.why||it.w)h+='<div class="what">'+e(it.why||it.w)+'</div>';
+  if(it.why||it.w)h+=clipWhat(it.why||it.w);
   if(it.extra)h+='<div class="note">'+e(it.extra)+'</div>';
   if(it.l&&it.l.length){h+='<div class="links">';
     it.l.forEach(function(a){var u=safe(a[1]);h+=u?'<a class="'+e(a[0])+'" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(a[2])+'</a>':'<span class="'+e(a[0])+'">'+e(a[2])+'</span>'});
@@ -492,6 +503,9 @@ function draw(){
 }
 
 document.addEventListener("click",function(ev){
+  var mt=ev.target;
+  if(mt&&mt.dataset&&mt.dataset.a==="more"){var w=mt.parentNode;w.classList.toggle("open");
+    mt.textContent=w.classList.contains("open")?"less":"more";ev.stopPropagation();return}
   var t=ev.target;
   if(t.id==="refresh"){load();return}
   if(t.id==="unhide"){var f=flags();Object.keys(f).forEach(function(k){
