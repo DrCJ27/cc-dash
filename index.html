@@ -73,7 +73,7 @@ background:var(--surface-2);cursor:pointer;color:var(--muted);font-size:13px;fon
 .pill{font:600 10px/1 Oswald,sans-serif;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:5px}
 .pill.crit{background:var(--crit-soft);color:var(--crit)}.pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.info{background:var(--surface-2);color:var(--cyan)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
-.what{color:var(--ink-2);font-size:15px}h2.tog{cursor:pointer;user-select:none}h2.tog:before{content:"\25B8  ";color:var(--gold,#FFC847)}h2.tog.open:before{content:"\25BE  "}.what.clip .rest{display:none}.what.clip.open .rest{display:inline}.b-more{background:none;border:0;color:var(--cyan,#76D7EA);font:inherit;font-size:13px;padding:0 0 0 6px;cursor:pointer}
+.what{color:var(--ink-2);font-size:15px}.cols{display:grid;grid-template-columns:1fr;gap:0 22px}.col{min-width:0}@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr 1fr 1fr;align-items:start}.wrap{max-width:none}}h2.tog{cursor:pointer;user-select:none}h2.tog:before{content:"\25B8  ";color:var(--gold,#FFC847)}h2.tog.open:before{content:"\25BE  "}.what.clip .rest{display:none}.what.clip.open .rest{display:inline}.b-more{background:none;border:0;color:var(--cyan,#76D7EA);font:inherit;font-size:13px;padding:0 0 0 6px;cursor:pointer}
 .what a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
 .what a:hover{color:var(--accent);border-bottom-color:var(--accent)}
 blockquote{margin:4px 0 0;padding:.3rem 0 .3rem .7rem;border-left:2px solid var(--line);color:var(--ink-2);font-size:14.5px}
@@ -431,10 +431,11 @@ function drawHQ(){
     :('SEASON 1 &middot; week '+(Math.floor((now-S1)/604800000)+1)+' of 6.'))+'</div></div>';
 
   if(FEED){
-    // ONE list. "Needs you now" = CJ's own today/this-week items (daily/cj-list.json,
-    // section id cj-today, curated in the main session) + the sweep's top section, deduped
-    // by the name the card opens with. The other cj-* groups fold under it.
-    // CJ, Nov 4 2026: "is this not what the needs you now board is.."
+    // ONE list, FOUR columns on a wide screen (CJ, Nov 4 2026: "we could probably go with
+    // some columns"): Needs you now | Athletes | WODprep | Personal. Needs you now = CJ's own
+    // today/this-week items (daily/cj-list.json, id cj-today) + the sweep's top section,
+    // deduped by the name the card opens with. On a phone the columns stack and the three
+    // groups fold behind their headings.
     var secs=FEED.sections||[],cj=secs.filter(function(s){return /^cj-/.test(s.id||"")}),
         va=secs.filter(function(s){return !/^cj-/.test(s.id||"")});
     var nm=function(i){return ((i.who||"").split(/[:,(]/)[0]||"").trim().toLowerCase().split(/\s+/).slice(0,2).join(" ")};
@@ -442,16 +443,20 @@ function drawHQ(){
     cj.filter(function(s){return s.id==="cj-today"}).forEach(function(s){(s.items||[]).forEach(function(i){if(isDone(i))return;top.push(i);seen[nm(i)]=1})});
     var s0=va[0]||{items:[]};
     (s0.items||[]).forEach(function(i){if(isDone(i))return;var k=nm(i);if(seen[k])return;seen[k]=1;top.push(i)});
-    var CAP=15,shown=top.slice(0,CAP);
+    var wide=window.matchMedia&&window.matchMedia("(min-width:1100px)").matches;
+    var CAP=wide?40:15,shown=top.slice(0,CAP);
+    h+='<div class="cols"><div class="col">';
     h+='<h2>Needs you now <em>'+top.length+' live &middot; ranked by cost of not acting</em></h2><ul>';
     shown.forEach(function(i){h+=item(i)});
     h+='</ul>';
     if(top.length>CAP)h+='<div style="margin-top:8px"><button class="more" data-lane="todo">+'+(top.length-CAP)+' more on the full board &rarr;</button></div>';
+    h+='</div>';
     cj.filter(function(s){return s.id!=="cj-today"}).forEach(function(s){
       var its=(s.items||[]).filter(function(i){return !isDone(i)});if(!its.length)return;
-      h+='<h2 class="tog">'+e((s.h||"").replace(/^CJ.s list: /,""))+' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul hidden>';
-      its.forEach(function(i){h+=item(i)});h+='</ul>';
+      h+='<div class="col"><h2 class="tog'+(wide?' open':'')+'">'+e((s.h||"").replace(/^CJ.s list: /,""))+' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul'+(wide?'':' hidden')+'>';
+      its.forEach(function(i){h+=item(i)});h+='</ul></div>';
     });
+    h+='</div>';
     var mh=mineHTML();h+=mh.h;
   }
   h+=sysHTML();
