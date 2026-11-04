@@ -73,7 +73,7 @@ background:var(--surface-2);cursor:pointer;color:var(--muted);font-size:13px;fon
 .pill{font:600 10px/1 Oswald,sans-serif;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:5px}
 .pill.crit{background:var(--crit-soft);color:var(--crit)}.pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.info{background:var(--surface-2);color:var(--cyan)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
-.what{color:var(--ink-2);font-size:15px}.what.clip .rest{display:none}.what.clip.open .rest{display:inline}.b-more{background:none;border:0;color:var(--cyan,#76D7EA);font:inherit;font-size:13px;padding:0 0 0 6px;cursor:pointer}
+.what{color:var(--ink-2);font-size:15px}h2.tog{cursor:pointer;user-select:none}h2.tog:before{content:"\25B8  ";color:var(--gold,#FFC847)}h2.tog.open:before{content:"\25BE  "}.what.clip .rest{display:none}.what.clip.open .rest{display:inline}.b-more{background:none;border:0;color:var(--cyan,#76D7EA);font:inherit;font-size:13px;padding:0 0 0 6px;cursor:pointer}
 .what a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
 .what a:hover{color:var(--accent);border-bottom-color:var(--accent)}
 blockquote{margin:4px 0 0;padding:.3rem 0 .3rem .7rem;border-left:2px solid var(--line);color:var(--ink-2);font-size:14.5px}
@@ -431,8 +431,20 @@ function drawHQ(){
     :('SEASON 1 &middot; week '+(Math.floor((now-S1)/604800000)+1)+' of 6.'))+'</div></div>';
 
   if(FEED){
+    // CJ'S OWN LIST (daily/cj-list.json, sections with id cj-*) comes before the sweep.
+    // First group open, the rest fold behind their heading. CJ, Nov 4 2026: "the whole
+    // point of the app is an all in one thing".
+    var secs=FEED.sections||[],cj=secs.filter(function(s){return /^cj-/.test(s.id||"")}),
+        va=secs.filter(function(s){return !/^cj-/.test(s.id||"")});
+    cj.forEach(function(s,ix){
+      var its=(s.items||[]).filter(function(i){return !isDone(i)});if(!its.length)return;
+      var op=ix===0;
+      h+='<h2 class="tog'+(op?' open':'')+'">'+e((s.h||"").replace(/^CJ.s list: /,""))
+        +' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul'+(op?'':' hidden')+'>';
+      its.forEach(function(i){h+=item(i)});h+='</ul>';
+    });
     // NEEDS YOU NOW -- first section of the VA board (already ranked by cost of not acting)
-    var s0=(FEED.sections||[])[0]||{items:[]};
+    var s0=va[0]||{items:[]};
     var items=(s0.items||[]).filter(function(i){return !isDone(i)});
     var CAP=15,shown=items.slice(0,CAP);
     h+='<h2>Needs you now <em>'+items.length+' live &middot; ranked by cost of not acting</em></h2><ul>';
@@ -508,6 +520,8 @@ function draw(){
 
 document.addEventListener("click",function(ev){
   var mt=ev.target;
+  var tg=mt&&mt.closest?mt.closest("h2.tog"):null;
+  if(tg){var ul=tg.nextElementSibling;if(ul){ul.hidden=!ul.hidden;tg.classList.toggle("open",!ul.hidden)}return}
   if(mt&&mt.dataset&&mt.dataset.a==="more"){var w=mt.parentNode;w.classList.toggle("open");
     mt.textContent=w.classList.contains("open")?"less":"more";ev.stopPropagation();return}
   var t=ev.target;
