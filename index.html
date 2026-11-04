@@ -291,6 +291,10 @@ async function load(){
     var r=await fetch(file+"?t="+Date.now(),{cache:"no-store"});
     if(!r.ok)throw new Error("no data file for "+lane+" yet (HTTP "+r.status+")");
     FEED=await decrypt(await r.json(),phrase);
+    // My list items captured on the Mac (daily/my-list.json via scripts/mylist.py) ride
+    // the feed; merge them like a remote device so phone ticks still win by ts.
+    if(FEED&&FEED.mine&&FEED.mine.length){
+      lsSet(MINE+"todo",mergeMine(lsGet(MINE+"todo",[]),FEED.mine));}
     if(FEED.hq&&FEED.hq.url&&FEED.hq.key){HQ=FEED.hq;lsSet(HQCFG,HQ)}
     migrate();
   }catch(x){
