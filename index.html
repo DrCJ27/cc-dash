@@ -431,26 +431,27 @@ function drawHQ(){
     :('SEASON 1 &middot; week '+(Math.floor((now-S1)/604800000)+1)+' of 6.'))+'</div></div>';
 
   if(FEED){
-    // CJ'S OWN LIST (daily/cj-list.json, sections with id cj-*) comes before the sweep.
-    // First group open, the rest fold behind their heading. CJ, Nov 4 2026: "the whole
-    // point of the app is an all in one thing".
+    // ONE list. "Needs you now" = CJ's own today/this-week items (daily/cj-list.json,
+    // section id cj-today, curated in the main session) + the sweep's top section, deduped
+    // by the name the card opens with. The other cj-* groups fold under it.
+    // CJ, Nov 4 2026: "is this not what the needs you now board is.."
     var secs=FEED.sections||[],cj=secs.filter(function(s){return /^cj-/.test(s.id||"")}),
         va=secs.filter(function(s){return !/^cj-/.test(s.id||"")});
-    cj.forEach(function(s,ix){
-      var its=(s.items||[]).filter(function(i){return !isDone(i)});if(!its.length)return;
-      var op=ix===0;
-      h+='<h2 class="tog'+(op?' open':'')+'">'+e((s.h||"").replace(/^CJ.s list: /,""))
-        +' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul'+(op?'':' hidden')+'>';
-      its.forEach(function(i){h+=item(i)});h+='</ul>';
-    });
-    // NEEDS YOU NOW -- first section of the VA board (already ranked by cost of not acting)
+    var nm=function(i){return ((i.who||"").split(/[:,(]/)[0]||"").trim().toLowerCase().split(/\s+/).slice(0,2).join(" ")};
+    var top=[],seen={};
+    cj.filter(function(s){return s.id==="cj-today"}).forEach(function(s){(s.items||[]).forEach(function(i){if(isDone(i))return;top.push(i);seen[nm(i)]=1})});
     var s0=va[0]||{items:[]};
-    var items=(s0.items||[]).filter(function(i){return !isDone(i)});
-    var CAP=15,shown=items.slice(0,CAP);
-    h+='<h2>Needs you now <em>'+items.length+' live &middot; ranked by cost of not acting</em></h2><ul>';
+    (s0.items||[]).forEach(function(i){if(isDone(i))return;var k=nm(i);if(seen[k])return;seen[k]=1;top.push(i)});
+    var CAP=15,shown=top.slice(0,CAP);
+    h+='<h2>Needs you now <em>'+top.length+' live &middot; ranked by cost of not acting</em></h2><ul>';
     shown.forEach(function(i){h+=item(i)});
     h+='</ul>';
-    if(items.length>CAP)h+='<div style="margin-top:8px"><button class="more" data-lane="todo">+'+(items.length-CAP)+' more on the full board &rarr;</button></div>';
+    if(top.length>CAP)h+='<div style="margin-top:8px"><button class="more" data-lane="todo">+'+(top.length-CAP)+' more on the full board &rarr;</button></div>';
+    cj.filter(function(s){return s.id!=="cj-today"}).forEach(function(s){
+      var its=(s.items||[]).filter(function(i){return !isDone(i)});if(!its.length)return;
+      h+='<h2 class="tog">'+e((s.h||"").replace(/^CJ.s list: /,""))+' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul hidden>';
+      its.forEach(function(i){h+=item(i)});h+='</ul>';
+    });
     var mh=mineHTML();h+=mh.h;
   }
   h+=sysHTML();
