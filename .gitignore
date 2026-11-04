@@ -1,0 +1,6 @@
+*
+!index.html
+!*.json
+!*.png
+!README.md
+!.gitignore

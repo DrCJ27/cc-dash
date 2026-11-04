@@ -13,7 +13,7 @@
 --muted:#7E95A8;--line:#1E3B52;--accent:#FFC847;--accent-ink:#0A1D2A;--accent-soft:#2B2410;
 --cyan:#76D7EA;--teal:#29ACC9;--crit:#FF8075;--crit-soft:#3A1713;--warn:#FFC847;--warn-soft:#30260C;
 --ok:#4FE0AC;--ok-soft:#0E2E22;color-scheme:dark}
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;background:var(--ground);color:var(--ink);
 font:16px/1.5 Archivo,ui-sans-serif,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .wrap{max-width:840px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 72px;display:flex;flex-direction:column;gap:16px}
@@ -73,7 +73,7 @@ background:var(--surface-2);cursor:pointer;color:var(--muted);font-size:13px;fon
 .pill{font:600 10px/1 Oswald,sans-serif;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:5px}
 .pill.crit{background:var(--crit-soft);color:var(--crit)}.pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.info{background:var(--surface-2);color:var(--cyan)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
-.what{color:var(--ink-2);font-size:15px}.cols{display:grid;grid-template-columns:1fr;gap:0 22px}.col{min-width:0}@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr 1fr 1fr;align-items:start}.wrap{max-width:none}}h2.tog{cursor:pointer;user-select:none}h2.tog:before{content:"\25B8  ";color:var(--gold,#FFC847)}h2.tog.open:before{content:"\25BE  "}.what.clip .rest{display:none}.what.clip.open .rest{display:inline}.b-more{background:none;border:0;color:var(--cyan,#76D7EA);font:inherit;font-size:13px;padding:0 0 0 6px;cursor:pointer}
+.what{color:var(--ink-2);font-size:15px}.cols{display:grid;grid-template-columns:1fr;gap:0 22px}.col{min-width:0}@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr 1fr 1fr;align-items:start}.wrap{max-width:none}}h2.tog{cursor:pointer;user-select:none}h2.tog:before{content:"\25B8  ";color:var(--accent)}h2.tog.open:before{content:"\25BE  "}.what.clip .rest{display:none}.what.clip.open .rest{display:inline}.expand{margin-top:8px}.b-more{background:none;border:0;color:var(--cyan,#76D7EA);font:inherit;font-size:13px;padding:0 0 0 6px;cursor:pointer}
 .what a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
 .what a:hover{color:var(--accent);border-bottom-color:var(--accent)}
 blockquote{margin:4px 0 0;padding:.3rem 0 .3rem .7rem;border-left:2px solid var(--line);color:var(--ink-2);font-size:14.5px}
@@ -104,6 +104,11 @@ var lane=(location.hash||"#hq").slice(1); if(!LANES.some(function(l){return l[0]
 function setFav(){}
 var KEYSTORE="cc-pass", FLAGS="cc-flags-", MINE="cc-mine-", IDEAS="cc-ideas", NIGHTS="cc-nights", HQCFG="cc-hq";
 var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
+var OPEN={}, PEND=0, HQ_ALL=0;   // open folds/cards, redraw deferred while typing, "+N more" expanded
+function typing(){var a=document.activeElement;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
+function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
+function snapDrafts(){var o={};["inew","ifind","iedit","ai"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
+function restoreDrafts(o){Object.keys(o).forEach(function(id){var x=document.getElementById(id);if(x&&!x.value)x.value=o[id]})}
 var HQ=lsGet0(HQCFG,null);           // {url,key} -- rides inside the encrypted todo feed
 var SYNC={state:HQ?"":"waiting for feed",ok:null};
 function $(id){return document.getElementById(id)}
@@ -221,41 +226,68 @@ function mergeMine(loc,rem){var m={};
     .sort(function(a,b){return entTs(a)-entTs(b)});}
 function mergeNights(loc,rem){var o=Object.assign({},loc);
   Object.keys(rem||{}).forEach(function(k){if(entTs(rem[k])>entTs(o[k]))o[k]=rem[k]});return o}
-async function syncPull(){
-  if(!HQ)return;
-  try{
-    var r=await hqPost({action:"read_blob",kind:"flags"});
-    if(r.ok&&r.data){
-      // blob is ciphertext under the board passphrase; a rotated phrase makes an
-      // old blob unreadable -> treated as absent, next push rewrites it.
-      try{
-        var rem=await decrypt(JSON.parse(r.data),localStorage.getItem(KEYSTORE));
-        lsSet(FLAGS+"todo",mergeFlags(lsGet(FLAGS+"todo",{}),rem.flags));
-        lsSet(MINE+"todo",mergeMine(lsGet(MINE+"todo",[]),rem.mine));
-        lsSet(IDEAS,mergeMine(lsGet(IDEAS,[]),rem.ideas));
-        lsSet(NIGHTS,mergeNights(lsGet(NIGHTS,{}),rem.nights));
-      }catch(x){}
-    }
-    SYNC.state="synced";SYNC.ok=true;
-    if(lsGet("cc-dirty",0))pushFlags();
-    draw();
-  }catch(x){SYNC.state="offline -- this device only";SYNC.ok=false;drawSys()}
+var SYNCING=null, PUSHING=null, REPUSH=0;
+async function pullMerge(){
+  // Merge the store copy INTO local before anything else happens. Returns the store's
+  // version stamp so the following write can be refused if someone wrote in between.
+  var r=await hqPost({action:"read_blob",kind:"flags"});
+  if(r.ok&&r.data){
+    try{
+      var rem=await decrypt(JSON.parse(r.data),localStorage.getItem(KEYSTORE));
+      lsSet(FLAGS+"todo",mergeFlags(lsGet(FLAGS+"todo",{}),rem.flags));
+      lsSet(MINE+"todo",mergeMine(lsGet(MINE+"todo",[]),rem.mine));
+      lsSet(IDEAS,mergeMine(lsGet(IDEAS,[]),rem.ideas));
+      lsSet(NIGHTS,mergeNights(lsGet(NIGHTS,{}),rem.nights));
+    }catch(x){}   // rotated phrase -> unreadable -> treated as absent; our write replaces it
+    return r.updated||"";
+  }
+  if(r.ok===false&&r.error==="not_found")return "";
+  throw new Error("read failed");
+}
+function syncPull(){
+  if(!HQ)return Promise.resolve();
+  if(SYNCING)return SYNCING;
+  SYNCING=(async function(){
+    try{
+      var upd=await pullMerge();
+      SYNC.state="synced";SYNC.ok=true;
+      if(lsGet("cc-dirty",0))await pushFlags(upd);
+      softDraw();
+    }catch(x){SYNC.state="offline -- this device only";SYNC.ok=false;drawSys()}
+    finally{SYNCING=null}
+  })();
+  return SYNCING;
 }
 var pushTimer=null;
-function queuePush(){lsSet("cc-dirty",1);SYNC.state="saving...";drawSys();
-  if(pushTimer)clearTimeout(pushTimer);pushTimer=setTimeout(pushFlags,1800)}
-async function pushFlags(){
+function queuePush(now){lsSet("cc-dirty",1);SYNC.state="saving...";drawSys();
+  if(pushTimer)clearTimeout(pushTimer);
+  if(now)pushFlags();else pushTimer=setTimeout(pushFlags,1800)}
+async function pushFlags(knownUpd){
   if(!HQ){SYNC.state="waiting for feed";drawSys();return}
-  try{
-    var state={v:1,ts:Date.now(),flags:lsGet(FLAGS+"todo",{}),
-      mine:lsGet(MINE+"todo",[]),ideas:lsGet(IDEAS,[]),nights:lsGet(NIGHTS,{})};
-    var blob=await encryptJSON(state,localStorage.getItem(KEYSTORE));
-    var r=await hqPost({action:"blob",kind:"flags",data:JSON.stringify(blob),
-      meta:{n:Object.keys(state.flags).length,mine:state.mine.length,ideas:state.ideas.length}});
-    if(r.ok){lsSet("cc-dirty",0);SYNC.state="synced";SYNC.ok=true}
-    else{SYNC.state="saved on this device -- will retry";SYNC.ok=false}
-  }catch(x){SYNC.state="saved on this device -- will retry";SYNC.ok=false}
-  drawSys();
+  if(PUSHING){REPUSH=1;return PUSHING}
+  PUSHING=(async function(){
+    try{
+      // Never write blind: a stale device used to overwrite every other device's
+      // ideas and ticks server-side (review, Nov 4 2026). Pull + merge, then write
+      // against the stamp we read; the store refuses if it moved, and we retry once.
+      var upd=(knownUpd!==undefined)?knownUpd:await pullMerge();
+      if(!lsGet("cc-dirty",0)){SYNC.state="synced";SYNC.ok=true;drawSys();return}
+      for(var attempt=0;attempt<2;attempt++){
+        var state={v:1,ts:Date.now(),flags:lsGet(FLAGS+"todo",{}),
+          mine:lsGet(MINE+"todo",[]),ideas:lsGet(IDEAS,[]),nights:lsGet(NIGHTS,{})};
+        var blob=await encryptJSON(state,localStorage.getItem(KEYSTORE));
+        var r=await hqPost({action:"blob",kind:"flags",data:JSON.stringify(blob),if_updated:upd,
+          meta:{n:Object.keys(state.flags).length,mine:state.mine.length,ideas:state.ideas.length}});
+        if(r.ok){lsSet("cc-dirty",0);SYNC.state="synced";SYNC.ok=true;break}
+        if(r.error==="conflict"&&attempt===0){upd=await pullMerge();continue}
+        SYNC.state="saved on this device -- will retry";SYNC.ok=false;break;
+      }
+    }catch(x){SYNC.state="saved on this device -- will retry";SYNC.ok=false}
+    finally{PUSHING=null}
+    drawSys();
+    if(REPUSH){REPUSH=0;pushFlags()}
+  })();
+  return PUSHING;
 }
 async function loadGlance(){
   if(!HQ)return;
@@ -309,11 +341,11 @@ async function load(){
       localStorage.removeItem(KEYSTORE); err="Wrong passphrase.";
     } else err=String(x.message||x);
   }
-  busy=false; draw();
+  busy=false; softDraw();
   if(lane==="hq"||flagLane()==="todo"){syncPull();loadGlance()}
 }
 
-function clipWhat(txt){
+function clipWhat(txt,k){
   // One card = one decision. Anything past the first ~200 chars folds behind "more"
   // (CJ, 2026-11-04 00:50: a 400-word reminder card was "terrible and unusable").
   var LIM=200;
@@ -321,8 +353,8 @@ function clipWhat(txt){
   var cut=txt.slice(0,LIM),m=cut.lastIndexOf('. ');
   if(m>80)cut=txt.slice(0,m+1);else{var sp=cut.lastIndexOf(' ');if(sp>80)cut=cut.slice(0,sp);}
   var rest=txt.slice(cut.length);
-  return '<div class="what clip">'+e(cut)+'<span class="rest">'+e(rest)+'</span>'
-    +'<button class="b-more" data-a="more">more</button></div>';
+  var op=k&&OPEN["m:"+k];
+  return '<div class="what clip'+(op?' open':'')+'" data-mk="'+e(k||"")+'">'+e(cut)+'<span class="rest">'+e(rest)+'</span><button class="b-more" data-a="more">'+(op?'less':'more')+'</button></div>';
 }
 function item(it){
   var k=keyOf(it),f=flagsFor(it);
@@ -344,7 +376,7 @@ function item(it){
     h+='<div class="what"><strong>'+hd+'</strong></div>';
   }
   if(it.q)h+='<blockquote>'+e(it.q)+'</blockquote>';
-  if(it.why||it.w)h+=clipWhat(it.why||it.w);
+  if(it.why||it.w)h+=clipWhat(it.why||it.w,k);
   if(it.extra)h+='<div class="note">'+e(it.extra)+'</div>';
   if(it.l&&it.l.length){h+='<div class="links">';
     it.l.forEach(function(a){var u=safe(a[1]);h+=u?'<a class="'+e(a[0])+'" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(a[2])+'</a>':'<span class="'+e(a[0])+'">'+e(a[2])+'</span>'});
@@ -354,7 +386,7 @@ function item(it){
 
 function mineHTML(){
   var mine=lsGet(MINE+"todo",[]),open=0,h="";
-  h+='<h2>My list <em>yours, not swept -- follows you across devices</em></h2>'
+  h+='<h2>My list <em>yours alone, every device</em></h2>'
    +'<div class="addrow"><input id="ai" placeholder="Add a to-do..."><button id="ab">Add</button></div><ul>';
   mine.forEach(function(m){if(m.done)return;open++;
     h+='<li class="item mine info" data-k="'+e(m.k)+'" data-mine="1"><button class="b-done" data-a="done">&#10003;</button>'
@@ -419,7 +451,7 @@ function drawHQ(){
      +'<div class="rung'+(lvl==="SCALED"?" live":(lvl==="LATE"?" gone":""))+'"><b>SCALED</b><span>by 12 AM</span></div>'
      +'</div>';
     var st=streakOf(nights);
-    h+='<button class="cta" id="callit">Call it &mdash; done for the night</button>';
+    h+='<button class="cta" id="callit">Call it. Done for the night.</button>';
     h+='<div class="sub" style="margin-top:8px">'+(st?('Streak '+st+' night'+(st>1?'s':'')+' &middot; '):'')
      +nightsBack(nights)+' evenings bought back. Done = work closed, tomorrow\'s list posted.</div>';
   }
@@ -445,30 +477,50 @@ function drawHQ(){
     // groups fold behind their headings.
     var secs=FEED.sections||[],cj=secs.filter(function(s){return /^cj-/.test(s.id||"")}),
         va=secs.filter(function(s){return !/^cj-/.test(s.id||"")});
-    var nm=function(i){return ((i.who||"").split(/[:,(]/)[0]||"").trim().toLowerCase().split(/\s+/).slice(0,2).join(" ")};
-    var top=[],seen={};
-    cj.filter(function(s){return s.id==="cj-today"}).forEach(function(s){(s.items||[]).forEach(function(i){if(isDone(i))return;top.push(i);seen[nm(i)]=1})});
+    // Dedupe key = the person the card is about. CJ's own columns are hand-curated per
+    // person, so a sweep card about the same first name folds INTO his card (its links come
+    // along) instead of showing twice. Sentence-led cards ("No card for...") fall back to
+    // their first two words. A cleared CJ card still counts as seen, so clearing Evelyn does
+    // not make the sweep's Evelyn pop up in the same slot (Aug 23 rule, re-broken Nov 4).
+    var STOP={no:1,the:1,a:1,an:1,before:1,if:1,when:1,your:1,my:1,our:1,this:1,that:1,book:1,call:1,get:1,send:1,update:1,check:1,delete:1,fix:1,pay:1,confirm:1,text:1,email:1,reply:1,ask:1,review:1,find:1,set:1,run:1,open:1,close:1,cancel:1,add:1,move:1,order:1,buy:1,sell:1,post:1,write:1,read:1,watch:1,calendar:1,security:1,new:1,old:1,all:1,one:1,two:1,"5":1};
+    var nm=function(i){var w=String(i.who||"").replace(/[\u2019']s\b/g,"").trim();
+      var first=(w.split(/[\s:,(]+/)[0]||"").toLowerCase();
+      if(first&&!STOP[first]&&/^[A-Z]/.test(w))return first;
+      return (w.split(/[:,(]/)[0]||"").trim().toLowerCase().split(/\s+/).slice(0,2).join(" ")};
+    var rank={crit:0,warn:1,info:2,ok:3};
+    var tone=function(i){var t=i.tone||i.c||"info";return rank[t]===undefined?2:rank[t]};
+    var seen={},owner={};
+    cj.forEach(function(s){(s.items||[]).forEach(function(i){var k=nm(i);if(!seen[k]){seen[k]=1;owner[k]=i}})});
+    var top=[];
+    cj.filter(function(s){return s.id==="cj-today"}).forEach(function(s){(s.items||[]).forEach(function(i){if(!isDone(i))top.push(i)})});
     var s0=va[0]||{items:[]};
-    (s0.items||[]).forEach(function(i){if(isDone(i))return;var k=nm(i);if(seen[k])return;seen[k]=1;top.push(i)});
+    (s0.items||[]).forEach(function(i){if(isDone(i))return;var k=nm(i);
+      if(seen[k]){var o=owner[k];if(o&&i.l&&i.l.length){o.l=o.l||[];i.l.forEach(function(a){
+        if(!o.l.some(function(b){return b[1]===a[1]}))o.l.push(a)})}
+        if(o&&tone(i)===0&&!isDone(o)&&top.indexOf(o)<0){o.c=o.c||"crit";top.push(o)}  // a $4,500 sweep card never hides in a side column
+        return}
+      seen[k]=1;owner[k]=i;top.push(i)});
+    top.sort(function(a,b){return tone(a)-tone(b)||String(a.since||"9").localeCompare(String(b.since||"9"))});
     var wide=window.matchMedia&&window.matchMedia("(min-width:1100px)").matches;
-    var CAP=wide?40:15,shown=top.slice(0,CAP);
+    var CAP=(wide||HQ_ALL)?999:15,shown=top.slice(0,CAP);
     h+='<div class="cols"><div class="col">';
-    h+='<h2>Needs you now <em>'+top.length+' live &middot; ranked by cost of not acting</em></h2><ul>';
+    h+='<h2>Needs you now <em>'+top.length+' live &middot; worst first</em></h2><ul>';
     shown.forEach(function(i){h+=item(i)});
     h+='</ul>';
-    if(top.length>CAP)h+='<div style="margin-top:8px"><button class="more" data-lane="todo">+'+(top.length-CAP)+' more on the full board &rarr;</button></div>';
+    if(top.length>CAP)h+='<div class="expand"><button class="more" data-a="expand">+'+(top.length-CAP)+' more</button></div>';
     h+='</div>';
     cj.filter(function(s){return s.id!=="cj-today"}).forEach(function(s){
       var its=(s.items||[]).filter(function(i){return !isDone(i)});if(!its.length)return;
-      h+='<div class="col"><h2 class="tog'+(wide?' open':'')+'">'+e((s.h||"").replace(/^CJ.s list: /,""))+' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul'+(wide?'':' hidden')+'>';
+      var op=wide||OPEN["f:"+s.id];
+      h+='<div class="col"><h2 class="tog'+(op?' open':'')+'" data-fold="'+e(s.id)+'">'+e((s.h||"").replace(/^CJ.s list: /,""))+' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul'+(op?'':' hidden')+'>';
       its.forEach(function(i){h+=item(i)});h+='</ul></div>';
     });
     h+='</div>';
     var mh=mineHTML();h+=mh.h;
   }
   h+=sysHTML();
-  h+='<footer>Ticks sync through your own store. Cleared items stay cleared until the message itself changes.</footer></div>';
-  $("app").innerHTML=h;
+  h+='<footer>Cleared stays cleared until the thing itself changes.</footer></div>';
+  var dr=snapDrafts();$("app").innerHTML=h;restoreDrafts(dr);
   var ci=$("callit");
   if(ci)ci.onclick=function(){
     var lvl=lvlNow(),d=eveDate(),key=dk(d);
@@ -488,8 +540,17 @@ function now2(){var d=new Date(),h=d.getHours(),m=("0"+d.getMinutes()).slice(-2)
 var IFILTER="",IEDIT=null;
 function ideaTags(t){var o=[];(t||"").replace(/(^|\s)#([a-z0-9][\w-]*)/gi,function(m,a,b){o.push(b.toLowerCase())});return o}
 function ideaBody(t){
-  return e(t).replace(/(^|\s)#([a-z0-9][\w-]*)/gi,function(m,a,b){return a+'<button class="tag" data-tag="'+e(b.toLowerCase())+'">#'+e(b)+'</button>'})
-    .replace(/(https?:\/\/[^\s<]+)/g,function(u){return '<a href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(u.replace(/^https?:\/\//,""))+'</a>'});
+  // Tokenize the RAW text, escape each piece once. Escaping first then linkifying turned
+  // every "&" in a URL into "&amp;amp;" (review, Nov 4 2026).
+  t=String(t||"");var out="",re=/(https?:\/\/[^\s<]+)|(^|\s)#([a-z0-9][\w-]*)/gi,last=0,m;
+  while((m=re.exec(t))){
+    out+=e(t.slice(last,m.index));
+    if(m[1]){var u=m[1],tail="",mm=u.match(/[),.;!?\]]+$/);if(mm){tail=mm[0];u=u.slice(0,-tail.length)}
+      out+='<a href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(u.replace(/^https?:\/\//,""))+'</a>'+e(tail);}
+    else out+=e(m[2])+'<button class="tag" data-tag="'+e(m[3].toLowerCase())+'">#'+e(m[3])+'</button>';
+    last=m.index+m[0].length;
+  }
+  return out+e(t.slice(last));
 }
 function ideaDate(ts){var d=new Date(ts||0);return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getDate()}
 function ideaCard(i){
@@ -502,8 +563,10 @@ function ideaCard(i){
   }
   h+='<div class="ihead"><span class="idate">'+ideaDate(i.ts)+(i.todo?' &middot; on My list':'')+'</span>'
    +'<button class="ib st" data-a="star" title="Pin to top">&#9733;</button></div>';
-  var t=i.t||"",long=t.length>420;
-  h+='<div class="itext'+(long?' clip':'')+'">'+(long?ideaBody(t.slice(0,380))+'<span class="rest">'+ideaBody(t.slice(380))+'</span><button class="b-more" data-a="more">more</button>':ideaBody(t))+'</div>';
+  var t=i.t||"",long=t.length>420,op=OPEN["m:"+i.k];
+  if(long){var cut=t.lastIndexOf(" ",380);if(cut<200)cut=380;
+    h+='<div class="itext clip'+(op?' open':'')+'" data-mk="'+e(i.k)+'">'+ideaBody(t.slice(0,cut))+'<span class="rest">'+ideaBody(t.slice(cut))+'</span><button class="b-more" data-a="more">'+(op?'less':'more')+'</button></div>';}
+  else h+='<div class="itext">'+ideaBody(t)+'</div>';
   h+='<div class="iact">';
   if(i.arch)h+='<button class="ib" data-a="restore">Restore</button>';
   else h+='<button class="ib" data-a="edit">Edit</button>'
@@ -515,7 +578,7 @@ function ideaCard(i){
 function ideasGridHTML(){
   var all=lsGet(IDEAS,[]),f=IFILTER.trim().toLowerCase(),live=[],arch=[];
   all.forEach(function(i){if(!i||!i.k||!i.t)return;
-    if(f&&(i.t.toLowerCase().indexOf(f)<0))return;
+    if(f){if(f.charAt(0)==="#"){if(ideaTags(i.t).indexOf(f.slice(1))<0)return}else if(i.t.toLowerCase().indexOf(f)<0)return}
     (i.arch?arch:live).push(i)});
   live.sort(function(a,b){return (b.star?1:0)-(a.star?1:0)||entTs(b)-entTs(a)});
   arch.sort(function(a,b){return entTs(b)-entTs(a)});
@@ -525,43 +588,45 @@ function ideasGridHTML(){
   if(tags.length){h+='<div class="tags">'+(f?'<button class="tag on" data-tag="">all</button>':'');
     tags.forEach(function(t){h+='<button class="tag'+(f==="#"+t?' on':'')+'" data-tag="'+e(t)+'">#'+e(t)+' <em>'+counts[t]+'</em></button>'});h+='</div>'}
   h+='<h2>Ideas <em>'+live.length+(f?' matching':'')+' &middot; newest first, pinned on top</em></h2>';
-  if(!live.length)h+='<div class="note">'+(f?'Nothing matches.':'Empty. Dump something above -- it does not have to be finished.')+'</div>';
+  if(!live.length)h+='<div class="note">'+(f?'Nothing matches.':'Nothing here yet.')+'</div>';
   h+='<ul class="igrid">';live.forEach(function(i){h+=ideaCard(i)});h+='</ul>';
-  if(arch.length){h+='<h2 class="tog">Archived <em>'+arch.length+'</em></h2><ul class="igrid" hidden>';
+  if(arch.length){var ao=OPEN["f:ideas-arch"];h+='<h2 class="tog'+(ao?' open':'')+'" data-fold="ideas-arch">Archived <em>'+arch.length+'</em></h2><ul class="igrid"'+(ao?'':' hidden')+'>';
     arch.forEach(function(i){h+=ideaCard(i)});h+='</ul>'}
   return h;
 }
 function drawIdeas(){
   var h='<div class="wrap wide"><div><div class="kicker">The Program <em>&middot;</em> <span style="color:var(--cyan)">Ideas</span></div>'
-   +'<h1>Idea space</h1><div class="sub">Not a to-do list. Half-formed is fine. Type #wodprep, #content, #athletes or any tag to sort later.</div></div>'
+   +'<h1>Idea space</h1><div class="sub">Half-formed is fine. Tag it #wodprep, #content, whatever, to sort later.</div></div>'
    +tabsHTML();
   if(busy)h+='<div class="note">Loading&hellip;</div>';
   if(err)h+='<div class="err">'+e(err)+'</div>';
-  h+='<div class="card gold"><div class="clabel">New idea<span class="r">&#8984;/Ctrl + Enter saves</span></div>'
+  var kb=window.matchMedia&&window.matchMedia("(hover:hover)").matches;
+  h+='<div class="card gold"><div class="clabel">New idea'+(kb?'<span class="r">&#8984; Enter saves</span>':'')+'</div>'
    +'<textarea id="inew" class="inew" placeholder="What is it..."></textarea>'
    +'<div class="iact"><button class="ib go" id="iadd">Save idea</button>'
    +'<input id="ifind" class="ifind" placeholder="Find..." value="'+e(IFILTER)+'"></div></div>';
   h+='<div id="igrid">'+ideasGridHTML()+'</div>';
   h+=sysHTML();
-  h+='<footer>Ideas sync through your own store like ticks. Archive hides, it never deletes.</footer></div>';
-  $("app").innerHTML=h;
+  h+='<footer>Archive hides. Nothing is deleted.</footer></div>';
+  var dr=snapDrafts();$("app").innerHTML=h;restoreDrafts(dr);
   var ta=$("inew");if(ta){ta.onkeydown=function(ev){if(ev.key==="Enter"&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();addIdea()}}}
   var fi=$("ifind");if(fi){fi.oninput=function(){IFILTER=fi.value;$("igrid").innerHTML=ideasGridHTML()}}
   var ed=$("iedit");if(ed){ed.focus();ed.selectionStart=ed.value.length;
     ed.onkeydown=function(ev){if(ev.key==="Enter"&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();saveIdeaEdit()}if(ev.key==="Escape"){IEDIT=null;redrawIdeas()}}}
 }
-function redrawIdeas(){var g=$("igrid");if(g)g.innerHTML=ideasGridHTML();else draw();
+function redrawIdeas(){var dr=snapDrafts();var g=$("igrid");if(g)g.innerHTML=ideasGridHTML();else draw();restoreDrafts(dr);
   var ed=$("iedit");if(ed){ed.focus();ed.selectionStart=ed.value.length;
     ed.onkeydown=function(ev){if(ev.key==="Enter"&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();saveIdeaEdit()}if(ev.key==="Escape"){IEDIT=null;redrawIdeas()}}}}
 function addIdea(){
   var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
   var all=lsGet(IDEAS,[]);all.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:v,ts:Date.now()});
-  lsSet(IDEAS,all);queuePush();ta.value="";IFILTER="";var fi=$("ifind");if(fi)fi.value="";redrawIdeas();
+  lsSet(IDEAS,all);queuePush(1);ta.value="";IFILTER="";var fi=$("ifind");if(fi)fi.value="";redrawIdeas();
 }
 function saveIdeaEdit(){
   var ed=$("iedit");if(!ed||!IEDIT)return;var v=ed.value.trim();
-  var all=lsGet(IDEAS,[]);all.forEach(function(i){if(i.k===IEDIT){if(v)i.t=v;i.ts=Date.now()}});
-  lsSet(IDEAS,all);IEDIT=null;queuePush();redrawIdeas();
+  if(!v){IEDIT=null;redrawIdeas();return}
+  var all=lsGet(IDEAS,[]),ch=false;all.forEach(function(i){if(i.k===IEDIT&&i.t!==v){i.t=v;i.ts=Date.now();ch=true}});
+  lsSet(IDEAS,all);IEDIT=null;if(ch)queuePush();redrawIdeas();
 }
 function ideaAct(k,a){
   var all=lsGet(IDEAS,[]),hit=null;all.forEach(function(i){if(i.k===k)hit=i});if(!hit)return;
@@ -572,7 +637,7 @@ function ideaAct(k,a){
   if(a==="arch")hit.arch=1;
   if(a==="restore")hit.arch=0;
   if(a==="todo"){var m=lsGet(MINE+"todo",[]);
-    m.push({k:"mine-"+Date.now(),who:hit.t.split("\n")[0].slice(0,160),ts:Date.now()});lsSet(MINE+"todo",m);hit.todo=1}
+    m.push({k:"mine-"+Date.now(),who:hit.t.split("\n")[0].slice(0,160),ts:Date.now(),from:hit.k});lsSet(MINE+"todo",m);hit.todo=1}
   hit.ts=Date.now();lsSet(IDEAS,all);queuePush();redrawIdeas();
 }
 
@@ -630,13 +695,17 @@ function draw(){
 document.addEventListener("click",function(ev){
   var mt=ev.target;
   var tg=mt&&mt.closest?mt.closest("h2.tog"):null;
-  if(tg){var ul=tg.nextElementSibling;if(ul){ul.hidden=!ul.hidden;tg.classList.toggle("open",!ul.hidden)}return}
+  if(tg){var ul=tg.nextElementSibling;if(ul){ul.hidden=!ul.hidden;tg.classList.toggle("open",!ul.hidden);
+    var fk="f:"+(tg.dataset.fold||"");if(ul.hidden)delete OPEN[fk];else OPEN[fk]=1}return}
   if(mt&&mt.dataset&&mt.dataset.a==="more"){var w=mt.parentNode;w.classList.toggle("open");
+    var mk="m:"+(w.dataset.mk||"");if(w.classList.contains("open"))OPEN[mk]=1;else delete OPEN[mk];
     mt.textContent=w.classList.contains("open")?"less":"more";ev.stopPropagation();return}
+  if(mt&&mt.dataset&&mt.dataset.a==="expand"){HQ_ALL=1;draw();return}
   var t=ev.target;
   if(t.id==="refresh"){load();return}
   if(t.id==="iadd"){addIdea();return}
-  if(t.dataset&&t.dataset.tag!==undefined){IFILTER=t.dataset.tag?"#"+t.dataset.tag:"";var fi=$("ifind");if(fi)fi.value=IFILTER;redrawIdeas();return}
+  var tb=t.closest&&t.closest("[data-tag]");
+  if(tb){var nf=tb.dataset.tag?"#"+tb.dataset.tag:"";IFILTER=(nf&&nf===IFILTER)?"":nf;var fi=$("ifind");if(fi)fi.value=IFILTER;redrawIdeas();return}
   var il=t.closest&&t.closest("li.idea");
   if(il&&t.dataset&&t.dataset.a){ideaAct(il.getAttribute("data-k"),t.dataset.a);return}
   if(t.id==="unhide"){var f=flags();Object.keys(f).forEach(function(k){
@@ -651,9 +720,11 @@ document.addEventListener("click",function(ev){
   if(li&&t.dataset&&t.dataset.a){
     var k=li.getAttribute("data-k");
     if(li.getAttribute("data-mine")){
-      var mm=lsGet(MINE+"todo",[]);
-      mm.forEach(function(m){if(m.k===k){m.done=1;m.ts=Date.now()}});
-      lsSet(MINE+"todo",mm);queuePush();draw();return}
+      var mm=lsGet(MINE+"todo",[]),from=null;
+      mm.forEach(function(m){if(m.k===k){m.done=1;m.ts=Date.now();from=m.from||null}});
+      lsSet(MINE+"todo",mm);
+      if(from){var ii=lsGet(IDEAS,[]);ii.forEach(function(i){if(i.k===from&&i.todo){i.todo=0;i.ts=Date.now()}});lsSet(IDEAS,ii)}
+      queuePush();draw();return}
     var src=null;
     (FEED&&FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){
       if(keyOf(i)===k)src=i})});
@@ -664,6 +735,8 @@ document.addEventListener("click",function(ev){
 window.addEventListener("hashchange",function(){
   var l=location.hash.slice(1);
   if(LANES.some(function(x){return x[0]===l})&&l!==lane){lane=l;FEED=null;load()}});
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&FEED){syncPull()}});
+document.addEventListener("focusout",function(){setTimeout(function(){if(PEND&&!typing()){PEND=0;draw()}},50)});
 // keep the Lights Out countdown honest without stomping on typing
 setInterval(function(){
   if(lane!=="hq"||!FEED)return;
