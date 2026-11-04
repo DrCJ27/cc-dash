@@ -152,7 +152,7 @@ function fmtDate(iso){
   return lbl;
 }
 function setFlag(k,n,v,it){var f=flags();var o=f[k]||(f[k]={});
- if(v){o[n]=1; if(n==="done"&&it)o.at=(it.latest||it.since||"");}
+ if(v){o[n]=1; if(n==="done"&&it)o.at=(it.horizon||it.latest||it.since||"");}
  else {delete o[n]; if(n==="done")delete o.at;}
  o.ts=Date.now();                     // tombstones kept for cross-device merge
  lsSet(FLAGS+flagLane(),f);
@@ -168,11 +168,17 @@ function isDone(it){var f=flagsFor(it);
  return cur<=f.at;
 }
 // One-time migration of pre-Oct-30 fp()-keyed flags onto the server key `k`.
+function pruneFlags(){
+  if(!FEED)return;var f=lsGet(FLAGS+"todo",{}),live={},cut=Date.now()-60*86400000,ch=false;
+  (FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){live[keyOf(i)]=1;(i.aka||[]).forEach(function(a){live[a]=1})})});
+  Object.keys(f).forEach(function(k){if(!live[k]&&(f[k].ts||0)<cut){delete f[k];ch=true}});
+  if(ch)lsSet(FLAGS+"todo",f);
+}
 function carryTicks(){
   if(!FEED)return;var f=lsGet(FLAGS+"todo",{}),ch=false;
   (FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){
     if(!i.aka||f[i.k])return;
-    i.aka.forEach(function(a){if(f[a]&&f[a].done&&!f[i.k]){f[i.k]={done:1,ts:Date.now()};ch=true}})})});
+    i.aka.forEach(function(a){if(f[a]&&f[a].done&&!f[i.k]){f[i.k]={done:1,ts:f[a].ts||1};ch=true}})})});
   if(ch){lsSet(FLAGS+"todo",f);lsSet("cc-dirty",1);PGEN++}
 }
 function migrate(){
@@ -261,7 +267,7 @@ function syncPull(){
       SYNC.state="synced";SYNC.ok=true;
       if(lsGet("cc-dirty",0))await pushFlags(upd);
       softDraw();
-    }catch(x){SYNC.state="offline -- this device only";SYNC.ok=false;drawSys()}
+    }catch(x){SYNC.state=x.message==="unreadable"?"store copy unreadable. Saved here, not syncing. Tell Claude.":"offline, this device only";SYNC.ok=false;drawSys()}
     finally{SYNCING=null}
   })();
   return SYNCING;
@@ -282,6 +288,7 @@ async function pushFlags(knownUpd){
       var upd=(knownUpd!==undefined)?knownUpd:await pullMerge();
       if(!lsGet("cc-dirty",0)){SYNC.state="synced";SYNC.ok=true;drawSys();return}
       for(var attempt=0;attempt<2;attempt++){
+        pruneFlags();
         var gen=PGEN;
         var state={v:1,ts:Date.now(),flags:lsGet(FLAGS+"todo",{}),
           mine:lsGet(MINE+"todo",[]),ideas:lsGet(IDEAS,[]),nights:lsGet(NIGHTS,{})};
@@ -293,7 +300,7 @@ async function pushFlags(knownUpd){
         if(r.error==="conflict"&&attempt===0){upd=await pullMerge();continue}
         SYNC.state="saved here, will sync";SYNC.ok=false;break;
       }
-    }catch(x){SYNC.state="saved here, will sync";SYNC.ok=false}
+    }catch(x){SYNC.state=x.message==="unreadable"?"store copy unreadable. Saved here, not syncing. Tell Claude.":"saved here, will sync";SYNC.ok=false}
     finally{PUSHING=null}
     drawSys();
     if(REPUSH){REPUSH=0;pushFlags()}
@@ -496,13 +503,16 @@ function topNow(){   // Needs you now after dedupe + ranking; null until the fee
     var rank={crit:0,warn:1,info:2,ok:3};
     var tone=function(i){var t=i.tone||i.c||"info";return rank[t]===undefined?2:rank[t]};
     var seen={},owner={},eff={};FOLDS={};
-    var lastOf=function(i){var m=String(i.who||"").match(/^[A-Z][\w'\u2019-]*\s+([A-Z][a-z][\w'\u2019-]*)/);return m?m[1].toLowerCase():""};
-    var flagDay=function(i){var f=flagsFor(i);return f.ts?new Date(f.ts).toISOString().slice(0,10):""};
+    var NOTLAST=/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|mon|tue|wed|thu|fri|sat|sun)/i;
+    var lastOf=function(i){var m=String(i.who||"").replace(/[\u2019']s\b/,"").match(/^[A-Z][\w'\u2019-]*\s+([A-Z][a-z][\w'\u2019-]*)/);return m&&!NOTLAST.test(m[1])?m[1].toLowerCase():""};
+    var flagDay=function(i){var f=flagsFor(i);return f.ts?dk(new Date(f.ts)):""};
     cj.forEach(function(s){(s.items||[]).forEach(function(i){var k=nm(i);if(!seen[k]){seen[k]=1;owner[k]=i}})});
     var top=[];
     cj.filter(function(s){return s.id==="cj-today"}).forEach(function(s){(s.items||[]).forEach(function(i){if(!isDone(i))top.push(i)})});
     var s0=va[0]||{items:[]};
-    (s0.items||[]).forEach(function(i){if(isDone(i))return;var k=nm(i);
+    var pool=(s0.items||[]).slice();
+    va.slice(1).forEach(function(x){(x.items||[]).forEach(function(i){if(tone(i)===0)pool.push(i)})});
+    pool.forEach(function(i){if(isDone(i))return;var k=nm(i);
       var o=owner[k];
       var other=o&&lastOf(o)&&lastOf(i)&&lastOf(o)!==lastOf(i);          // Erin Morris is not Erin Dunne
       var newer=o&&isDone(o)&&i.latest&&i.latest>flagDay(o);             // cleared, then something really happened
@@ -663,7 +673,7 @@ function redrawIdeas(){var dr=snapDrafts();var g=$("igrid");if(g)g.innerHTML=ide
 function addIdea(){
   var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
   var all=lsGet(IDEAS,[]);all.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:v,ts:Date.now()});
-  lsSet(IDEAS,all);queuePush(1);ta.value="";IFILTER="";var fi=$("ifind");if(fi)fi.value="";redrawIdeas();
+  lsSet(IDEAS,all);queuePush(1);ta.value="";try{localStorage.removeItem("cc-idea-draft")}catch(x){}IFILTER="";var fi=$("ifind");if(fi)fi.value="";redrawIdeas();
 }
 function saveIdeaEdit(){
   var ed=$("iedit");if(!ed||!IEDIT)return;var v=ed.value.trim();
