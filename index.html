@@ -100,15 +100,15 @@ footer{border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font
 </style></head><body><div id="app"></div>
 <script>
 var LANES=[["hq","The Program"],["todo","Today"],["ideas","Ideas"]];
-var lane=(location.hash||"#hq").slice(1); if(!LANES.some(function(l){return l[0]===lane}))lane="hq";
+var lane=(location.hash||"#hq").slice(1); if(!LANES.some(function(l){return l[0]===lane})&&lane!=="panel")lane="hq";
 function setFav(){}
 var KEYSTORE="cc-pass", FLAGS="cc-flags-", MINE="cc-mine-", IDEAS="cc-ideas", NIGHTS="cc-nights", HQCFG="cc-hq";
 var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
-var OPEN={}, PEND=0, HQ_ALL=0;   // open folds/cards, redraw deferred while typing, "+N more" expanded
+var OPEN={}, PEND=0, HQ_ALL=0, FOLDS={};   // open folds/cards, redraw deferred while typing, "+N more" expanded
 function typing(){var a=document.activeElement;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
 function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
-function snapDrafts(){var o={};["inew","ifind","iedit","ai"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
-function restoreDrafts(o){Object.keys(o).forEach(function(id){var x=document.getElementById(id);if(x&&!x.value)x.value=o[id]})}
+function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT};["inew","ifind","iedit","ai"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
+function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie")return;var x=document.getElementById(id);if(!x)return;if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
 var HQ=lsGet0(HQCFG,null);           // {url,key} -- rides inside the encrypted todo feed
 var SYNC={state:HQ?"":"waiting for feed",ok:null};
 function $(id){return document.getElementById(id)}
@@ -118,7 +118,7 @@ function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
 function lsGet0(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(x){return d}}
 var lsGet=lsGet0;
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(x){}}
-function flagLane(){return lane==="hq"||lane==="ideas"?"todo":lane}
+function flagLane(){return lane==="hq"||lane==="ideas"||lane==="panel"?"todo":lane}
 function flags(){return lsGet(FLAGS+flagLane(),{})}
 // IDENTITY: the server's content-derived stable key `k` (stable_key.py) is the
 // canonical id a tick is recorded against -- it is what the store, the phone and
@@ -168,6 +168,13 @@ function isDone(it){var f=flagsFor(it);
  return cur<=f.at;
 }
 // One-time migration of pre-Oct-30 fp()-keyed flags onto the server key `k`.
+function carryTicks(){
+  if(!FEED)return;var f=lsGet(FLAGS+"todo",{}),ch=false;
+  (FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){
+    if(!i.aka||f[i.k])return;
+    i.aka.forEach(function(a){if(f[a]&&f[a].done&&!f[i.k]){f[i.k]={done:1,ts:Date.now()};ch=true}})})});
+  if(ch){lsSet(FLAGS+"todo",f);lsSet("cc-dirty",1);PGEN++}
+}
 function migrate(){
   if(!FEED)return;
   var mk="cc-migrated-k-"+flagLane();
@@ -213,8 +220,9 @@ async function encryptJSON(obj,phrase){
 /* ---------- HQ store sync (Apps Script; key travels only in the POST body) ---------- */
 function hqPost(body){
   body.key=HQ.key;
-  return fetch(HQ.url,{method:"POST",headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify(body)}).then(function(r){return r.json()});
+  var ac=new AbortController(),to=setTimeout(function(){ac.abort()},30000);
+  return fetch(HQ.url,{method:"POST",headers:{"Content-Type":"text/plain"},signal:ac.signal,
+    body:JSON.stringify(body)}).then(function(r){return r.json()}).finally(function(){clearTimeout(to)});
 }
 function entTs(o){return (o&&o.ts)||0}
 function mergeFlags(loc,rem){var o=Object.assign({},loc);
@@ -238,7 +246,7 @@ async function pullMerge(){
       lsSet(MINE+"todo",mergeMine(lsGet(MINE+"todo",[]),rem.mine));
       lsSet(IDEAS,mergeMine(lsGet(IDEAS,[]),rem.ideas));
       lsSet(NIGHTS,mergeNights(lsGet(NIGHTS,{}),rem.nights));
-    }catch(x){}   // rotated phrase -> unreadable -> treated as absent; our write replaces it
+    }catch(x){throw new Error("unreadable")}   // never overwrite what we cannot read (passphrase rotated?)
     return r.updated||"";
   }
   if(r.ok===false&&r.error==="not_found")return "";
@@ -249,7 +257,7 @@ function syncPull(){
   if(SYNCING)return SYNCING;
   SYNCING=(async function(){
     try{
-      var upd=await pullMerge();
+      var upd=await pullMerge();carryTicks();
       SYNC.state="synced";SYNC.ok=true;
       if(lsGet("cc-dirty",0))await pushFlags(upd);
       softDraw();
@@ -258,12 +266,13 @@ function syncPull(){
   })();
   return SYNCING;
 }
-var pushTimer=null;
-function queuePush(now){lsSet("cc-dirty",1);SYNC.state="saving...";drawSys();
+var pushTimer=null,PGEN=0,RETRY=null;
+function queuePush(now){PGEN++;lsSet("cc-dirty",1);SYNC.state="saving...";drawSys();
   if(pushTimer)clearTimeout(pushTimer);
   if(now)pushFlags();else pushTimer=setTimeout(pushFlags,1800)}
 async function pushFlags(knownUpd){
   if(!HQ){SYNC.state="waiting for feed";drawSys();return}
+  if(!localStorage.getItem(KEYSTORE))return;   // never encrypt under a missing passphrase
   if(PUSHING){REPUSH=1;return PUSHING}
   PUSHING=(async function(){
     try{
@@ -273,19 +282,22 @@ async function pushFlags(knownUpd){
       var upd=(knownUpd!==undefined)?knownUpd:await pullMerge();
       if(!lsGet("cc-dirty",0)){SYNC.state="synced";SYNC.ok=true;drawSys();return}
       for(var attempt=0;attempt<2;attempt++){
+        var gen=PGEN;
         var state={v:1,ts:Date.now(),flags:lsGet(FLAGS+"todo",{}),
           mine:lsGet(MINE+"todo",[]),ideas:lsGet(IDEAS,[]),nights:lsGet(NIGHTS,{})};
         var blob=await encryptJSON(state,localStorage.getItem(KEYSTORE));
+        if(JSON.stringify(blob).length>45000){SYNC.state="too big to sync. Ideas are safe on this device. Tell Claude.";SYNC.ok=false;break}
         var r=await hqPost({action:"blob",kind:"flags",data:JSON.stringify(blob),if_updated:upd,
           meta:{n:Object.keys(state.flags).length,mine:state.mine.length,ideas:state.ideas.length}});
-        if(r.ok){lsSet("cc-dirty",0);SYNC.state="synced";SYNC.ok=true;break}
+        if(r.ok){if(gen===PGEN){lsSet("cc-dirty",0);SYNC.state="synced"}else REPUSH=1;SYNC.ok=true;break}
         if(r.error==="conflict"&&attempt===0){upd=await pullMerge();continue}
-        SYNC.state="saved on this device -- will retry";SYNC.ok=false;break;
+        SYNC.state="saved here, will sync";SYNC.ok=false;break;
       }
-    }catch(x){SYNC.state="saved on this device -- will retry";SYNC.ok=false}
+    }catch(x){SYNC.state="saved here, will sync";SYNC.ok=false}
     finally{PUSHING=null}
     drawSys();
     if(REPUSH){REPUSH=0;pushFlags()}
+    else if(lsGet("cc-dirty",0)&&!RETRY){RETRY=setTimeout(function(){RETRY=null;if(lsGet("cc-dirty",0))pushFlags()},60000)}
   })();
   return PUSHING;
 }
@@ -324,10 +336,10 @@ async function load(){
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){busy=false;draw();return}
   try{
-    var file=(lane==="hq"||lane==="ideas"?"todo":lane)+".json";
+    var file=(lane==="hq"||lane==="ideas"||lane==="panel"?"todo":lane)+".json";
     var r=await fetch(file+"?t="+Date.now(),{cache:"no-store"});
     if(!r.ok)throw new Error("no data file for "+lane+" yet (HTTP "+r.status+")");
-    FEED=await decrypt(await r.json(),phrase);
+    FEED=await decrypt(await r.json(),phrase);FEED_AT=Date.now();
     // My list items captured on the Mac (daily/my-list.json via scripts/mylist.py) ride
     // the feed; merge them like a remote device so phone ticks still win by ts.
     if(FEED&&FEED.mine&&FEED.mine.length){
@@ -335,14 +347,14 @@ async function load(){
     if(FEED&&FEED.ideas&&FEED.ideas.length){
       lsSet(IDEAS,mergeMine(lsGet(IDEAS,[]),FEED.ideas));}
     if(FEED.hq&&FEED.hq.url&&FEED.hq.key){HQ=FEED.hq;lsSet(HQCFG,HQ)}
-    migrate();
+    migrate();carryTicks();
   }catch(x){
     if(String(x).indexOf("operation-specific")>-1||x.name==="OperationError"){
       localStorage.removeItem(KEYSTORE); err="Wrong passphrase.";
     } else err=String(x.message||x);
   }
   busy=false; softDraw();
-  if(lane==="hq"||flagLane()==="todo"){syncPull();loadGlance()}
+  if(!err&&(lane==="hq"||flagLane()==="todo")){syncPull();loadGlance()}
 }
 
 function clipWhat(txt,k){
@@ -378,8 +390,12 @@ function item(it){
   if(it.q)h+='<blockquote>'+e(it.q)+'</blockquote>';
   if(it.why||it.w)h+=clipWhat(it.why||it.w,k);
   if(it.extra)h+='<div class="note">'+e(it.extra)+'</div>';
-  if(it.l&&it.l.length){h+='<div class="links">';
-    it.l.forEach(function(a){var u=safe(a[1]);h+=u?'<a class="'+e(a[0])+'" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(a[2])+'</a>':'<span class="'+e(a[0])+'">'+e(a[2])+'</span>'});
+  var fl=lane==="todo"?[]:(FOLDS[k]||[]),ls=(it.l||[]).slice();
+  fl.forEach(function(x){
+    h+='<div class="note"><strong>Latest sweep:</strong> '+e(x.who||"")+(x.w?' '+e(String(x.w).slice(0,220)):'')+'</div>';
+    (x.l||[]).forEach(function(a){if(!ls.some(function(b){return b[1]===a[1]}))ls.push(a)})});
+  if(ls.length){h+='<div class="links">';
+    ls.forEach(function(a){var u=safe(a[1]);h+=u?'<a class="'+e(a[0])+'" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(a[2])+'</a>':'<span class="'+e(a[0])+'">'+e(a[2])+'</span>'});
     h+='</div>'}
   return h+'</li>';
 }
@@ -400,12 +416,12 @@ function sysHTML(){
   if(GLANCE&&GLANCE.last_heartbeat){
     var m=Math.round((Date.now()-new Date(GLANCE.last_heartbeat).getTime())/60000);
     if(m<30)rows.push('<span class="good">MAC &middot; synced '+(m<2?'just now':m+'m ago')+'</span>');
-    else rows.push('<span class="amber">MAC &middot; quiet '+(m<120?m+'m':Math.round(m/60)+'h')+' -- asleep or offline. System state, not yours.</span>');
+    else rows.push('<span class="amber">MAC &middot; quiet '+(m<120?m+'m':Math.round(m/60)+'h')+' (asleep or offline)</span>');
   }
   if(FEED&&(FEED.stamp||FEED.generated))rows.push('BOARD &middot; '+e(FEED.stamp||FEED.generated));
   if(HQ){var c=SYNC.ok===false?'amber':(SYNC.ok?'good':'');
     rows.push('<span class="'+c+'">TICKS &middot; '+e(SYNC.state||"...")+'</span>');}
-  else rows.push('<span class="amber">TICKS &middot; store config arrives with the next board publish</span>');
+  else rows.push('<span class="amber">TICKS &middot; connecting</span>');
   return '<div class="sys" id="sys">'+rows.map(function(r){return '<div>'+r+'</div>'}).join("")+'</div>';
 }
 function drawSys(){var s=$("sys");if(s)s.outerHTML=sysHTML()}
@@ -416,18 +432,9 @@ function tabsHTML(){
   return h+'<button id="refresh">Refresh</button></div>';
 }
 
-/* ---------- THE PROGRAM landing ---------- */
-function drawHQ(){
-  var now=new Date(),ed=eveDate(),day=ed.getDay(),R=RHYTHM[day];
-  var nights=lsGet(NIGHTS,{}),tonight=nights[dk(ed)];
-  var h='<div class="wrap">';
-  h+='<div><div class="kicker">The Program <em>&middot;</em> <span style="color:var(--cyan)">Don\'t be a pussy</span></div>';
-  h+='<h1>'+["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][day]+': '+R[0]+'</h1>';
-  h+='<div class="sub">'+R[1]+'</div></div>';
-  h+=tabsHTML();
-  if(busy)h+='<div class="note">Loading&hellip;</div>';
-  if(err)h+='<div class="err">'+e(err)+'</div>';
-
+function lightsOutHTML(){
+  var now=new Date(),ed=eveDate(),day=ed.getDay();
+  var nights=lsGet(NIGHTS,{}),tonight=nights[dk(ed)],h="";
   // TONIGHT -- Lights Out
   var hr=now.getHours();
   h+='<div class="card gold"><div class="clabel">Lights Out';
@@ -436,7 +443,7 @@ function drawHQ(){
     cd='Rx+ closes at 10:00 PM &middot; '+Math.floor(mins/60)+'h '+(mins%60)+'m left';}
   else if(hr===22)cd='Rx+ gone. Rx closes at 11:00 PM';
   else if(hr===23)cd='Scaled closes at midnight';
-  else cd='Past midnight -- log it anyway. Finishing beats skipping.';
+  else cd='Past midnight. Log it anyway.';
   h+='<span class="r">'+cd+'</span></div>';
   if(tonight){
     h+='<div class="won"><span class="lvl">'+e(tonight.l)+'</span>'
@@ -469,12 +476,10 @@ function drawHQ(){
     ?('BLOCK 0 &middot; baseline runs through Sat Nov 8. Season 1 opens Mon Nov 9 -- every night and every Sunday counts from there.')
     :('SEASON 1 &middot; week '+(Math.floor((now-S1)/604800000)+1)+' of 6.'))+'</div></div>';
 
-  if(FEED){
-    // ONE list, FOUR columns on a wide screen (CJ, Nov 4 2026: "we could probably go with
-    // some columns"): Needs you now | Athletes | WODprep | Personal. Needs you now = CJ's own
-    // today/this-week items (daily/cj-list.json, id cj-today) + the sweep's top section,
-    // deduped by the name the card opens with. On a phone the columns stack and the three
-    // groups fold behind their headings.
+  return h;
+}
+function topNow(){   // Needs you now after dedupe + ranking; null until the feed is in
+  if(!FEED)return null;
     var secs=FEED.sections||[],cj=secs.filter(function(s){return /^cj-/.test(s.id||"")}),
         va=secs.filter(function(s){return !/^cj-/.test(s.id||"")});
     // Dedupe key = the person the card is about. CJ's own columns are hand-curated per
@@ -482,25 +487,36 @@ function drawHQ(){
     // along) instead of showing twice. Sentence-led cards ("No card for...") fall back to
     // their first two words. A cleared CJ card still counts as seen, so clearing Evelyn does
     // not make the sweep's Evelyn pop up in the same slot (Aug 23 rule, re-broken Nov 4).
-    var STOP={no:1,the:1,a:1,an:1,before:1,if:1,when:1,your:1,my:1,our:1,this:1,that:1,book:1,call:1,get:1,send:1,update:1,check:1,delete:1,fix:1,pay:1,confirm:1,text:1,email:1,reply:1,ask:1,review:1,find:1,set:1,run:1,open:1,close:1,cancel:1,add:1,move:1,order:1,buy:1,sell:1,post:1,write:1,read:1,watch:1,calendar:1,security:1,new:1,old:1,all:1,one:1,two:1,"5":1};
+    var STOP={no:1,the:1,a:1,an:1,before:1,if:1,when:1,your:1,my:1,our:1,this:1,that:1,book:1,call:1,today:1,tomorrow:1,tonight:1,mon:1,tue:1,wed:1,thu:1,fri:1,sat:1,sun:1,monday:1,tuesday:1,wednesday:1,thursday:1,friday:1,saturday:1,sunday:1,chase:1,get:1,send:1,update:1,check:1,delete:1,fix:1,pay:1,confirm:1,text:1,email:1,reply:1,ask:1,review:1,find:1,set:1,run:1,open:1,close:1,cancel:1,add:1,move:1,order:1,buy:1,sell:1,post:1,write:1,read:1,watch:1,calendar:1,security:1,new:1,old:1,all:1,one:1,two:1,"5":1};
     var nm=function(i){var w=String(i.who||"").replace(/[\u2019']s\b/g,"").trim();
       var first=(w.split(/[\s:,(]+/)[0]||"").toLowerCase();
       if(first&&!STOP[first]&&/^[A-Z]/.test(w))return first;
       return (w.split(/[:,(]/)[0]||"").trim().toLowerCase().split(/\s+/).slice(0,2).join(" ")};
     var rank={crit:0,warn:1,info:2,ok:3};
     var tone=function(i){var t=i.tone||i.c||"info";return rank[t]===undefined?2:rank[t]};
-    var seen={},owner={};
+    var seen={},owner={},eff={};FOLDS={};
+    var lastOf=function(i){var m=String(i.who||"").match(/^[A-Z][\w'\u2019-]*\s+([A-Z][a-z][\w'\u2019-]*)/);return m?m[1].toLowerCase():""};
+    var flagDay=function(i){var f=flagsFor(i);return f.ts?new Date(f.ts).toISOString().slice(0,10):""};
     cj.forEach(function(s){(s.items||[]).forEach(function(i){var k=nm(i);if(!seen[k]){seen[k]=1;owner[k]=i}})});
     var top=[];
     cj.filter(function(s){return s.id==="cj-today"}).forEach(function(s){(s.items||[]).forEach(function(i){if(!isDone(i))top.push(i)})});
     var s0=va[0]||{items:[]};
     (s0.items||[]).forEach(function(i){if(isDone(i))return;var k=nm(i);
-      if(seen[k]){var o=owner[k];if(o&&i.l&&i.l.length){o.l=o.l||[];i.l.forEach(function(a){
-        if(!o.l.some(function(b){return b[1]===a[1]}))o.l.push(a)})}
-        if(o&&tone(i)===0&&!isDone(o)&&top.indexOf(o)<0){o.c=o.c||"crit";top.push(o)}  // a $4,500 sweep card never hides in a side column
+      var o=owner[k];
+      var other=o&&lastOf(o)&&lastOf(i)&&lastOf(o)!==lastOf(i);          // Erin Morris is not Erin Dunne
+      var newer=o&&isDone(o)&&i.latest&&i.latest>flagDay(o);             // cleared, then something really happened
+      if(seen[k]&&!other&&!newer){
+        var ok=keyOf(o);(FOLDS[ok]=FOLDS[ok]||[]).push(i);
+        if(tone(i)<(eff[ok]===undefined?tone(o):eff[ok]))eff[ok]=tone(i);
+        if(tone(i)===0&&!isDone(o)&&top.indexOf(o)<0)top.push(o);        // a $4,500 sweep card never hides in a side column
         return}
       seen[k]=1;owner[k]=i;top.push(i)});
-    top.sort(function(a,b){return tone(a)-tone(b)||String(a.since||"9").localeCompare(String(b.since||"9"))});
+    var et=function(i){var x=eff[keyOf(i)];return x===undefined?tone(i):x};
+    top.sort(function(a,b){return et(a)-et(b)||String(a.since||"9").localeCompare(String(b.since||"9"))});
+  return top;
+}
+function listsHTML(){
+  var secs=FEED.sections||[],cj=secs.filter(function(s){return /^cj-/.test(s.id||"")}),top=topNow(),h="";
     var wide=window.matchMedia&&window.matchMedia("(min-width:1100px)").matches;
     var CAP=(wide||HQ_ALL)?999:15,shown=top.slice(0,CAP);
     h+='<div class="cols"><div class="col">';
@@ -516,11 +532,9 @@ function drawHQ(){
       its.forEach(function(i){h+=item(i)});h+='</ul></div>';
     });
     h+='</div>';
-    var mh=mineHTML();h+=mh.h;
-  }
-  h+=sysHTML();
-  h+='<footer>Cleared stays cleared until the thing itself changes.</footer></div>';
-  var dr=snapDrafts();$("app").innerHTML=h;restoreDrafts(dr);
+  return h;
+}
+function wireCallIt(){
   var ci=$("callit");
   if(ci)ci.onclick=function(){
     var lvl=lvlNow(),d=eveDate(),key=dk(d);
@@ -529,6 +543,34 @@ function drawHQ(){
     fireEvent("lights_out",key,{level:lvl,at:t});
     queuePush();draw();
   };
+}
+/* ---------- THE PROGRAM landing ---------- */
+function drawHQ(){
+  var now=new Date(),ed=eveDate(),day=ed.getDay(),R=RHYTHM[day];
+  var nights=lsGet(NIGHTS,{}),tonight=nights[dk(ed)];
+  var h='<div class="wrap">';
+  h+='<div><div class="kicker">The Program <em>&middot;</em> <span style="color:var(--cyan)">Don\'t be a pussy</span></div>';
+  h+='<h1>'+["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][day]+': '+R[0]+'</h1>';
+  h+='<div class="sub">'+R[1]+'</div></div>';
+  h+=tabsHTML();
+  if(busy)h+='<div class="note">Loading&hellip;</div>';
+  if(err)h+='<div class="err">'+e(err)+'</div>';
+
+  h+=lightsOutHTML();
+
+  if(FEED){
+    // ONE list, FOUR columns on a wide screen (CJ, Nov 4 2026: "we could probably go with
+    // some columns"): Needs you now | Athletes | WODprep | Personal. Needs you now = CJ's own
+    // today/this-week items (daily/cj-list.json, id cj-today) + the sweep's top section,
+    // deduped by the name the card opens with. On a phone the columns stack and the three
+    // groups fold behind their headings.
+    h+=listsHTML();
+    var mh=mineHTML();h+=mh.h;
+  }
+  h+=sysHTML();
+  h+='<footer>Cleared stays cleared until the thing itself changes.</footer></div>';
+  var dr=snapDrafts();$("app").innerHTML=h;restoreDrafts(dr);
+  wireCallIt();
 }
 function now2(){var d=new Date(),h=d.getHours(),m=("0"+d.getMinutes()).slice(-2),
   ap=h>=12?"PM":"AM";h=h%12;if(!h)h=12;return h+":"+m+" "+ap}
@@ -641,12 +683,66 @@ function ideaAct(k,a){
   hit.ts=Date.now();lsSet(IDEAS,all);queuePush();redrawIdeas();
 }
 
+/* ---------- MENU BAR PANEL (hq/menubar, Nov 4 2026). "Full HQ, Ideas on top." Read-only hooks:
+   no secret crosses to the native side, only counts and a clock. ---------- */
+var QUICK=false,FEED_AT=0,DRAFT="cc-idea-draft";
+function nativeClose(){try{window.webkit.messageHandlers.hq.postMessage("close")}catch(x){}}
+function openIdeas(){return lsGet(IDEAS,[]).filter(function(i){return i&&!i.arch}).length}
+function drawPanel(){
+  var ae=document.activeElement,foc=(ae&&ae.id==="inew")||(QUICK&&(!ae||ae===document.body));
+  var h='<div class="wrap">'+tabsHTML();
+  if(busy&&!FEED)h+='<div class="note">Loading&hellip;</div>';
+  if(err)h+='<div class="err">'+e(err)+'</div>';
+  h+='<div class="card gold"><div class="clabel">New idea<span class="r">Enter saves &middot; Shift+Enter new line &middot; Esc closes</span></div>'
+   +'<textarea id="inew" class="inew" placeholder="What is it..."></textarea>'
+   +'<div class="iact"><button class="ib go" id="iadd">Save idea</button>'
+   +'<button class="ib" data-lane="ideas">'+openIdeas()+(openIdeas()===1?' idea':' ideas')+' &rarr;</button></div></div>';
+  if(FEED)h+=listsHTML()+mineHTML().h;
+  h+=lightsOutHTML()+sysHTML()+'</div>';
+  var dr=snapDrafts();$("app").innerHTML=h;restoreDrafts(dr);
+  wireCallIt();
+  var ta=$("inew");
+  if(ta){if(!ta.value)ta.value=lsGet(DRAFT,"");   // a half-typed idea survives a reload, quit or crash
+    ta.oninput=function(){lsSet(DRAFT,ta.value)};
+    ta.onkeydown=function(ev){
+      if(ev.key==="Enter"&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();
+        if(!ta.value.trim())return;
+        panelSave();}};
+    if(foc){ta.focus();ta.selectionStart=ta.value.length}}
+}
+function panelSave(){var q=QUICK;addIdea();try{localStorage.removeItem(DRAFT)}catch(x){}if(q)nativeClose()}
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape")nativeClose()});   // no-op in a browser
+window.hqOpen=function(quick){
+  QUICK=!!quick;
+  if(lane!=="panel"){lane="panel";location.hash="#panel";draw()}
+  if(quick){var t=$("inew")||$("pw");if(t){t.focus();if(t.selectionStart!==undefined)t.selectionStart=t.value.length}}
+};
+window.hqFlush=function(){      // panel closed: stop counting as "typing" so refresh and the count stay live
+  QUICK=false;
+  var a=document.activeElement;if(a&&a.blur)a.blur();
+  if(PEND){PEND=0;draw()}
+  if(localStorage.getItem(KEYSTORE)&&lsGet("cc-dirty",0))queuePush(1);
+};
+window.hqTick=function(shown){      // native calls every 60s: keep a long-running page honest
+  if(!localStorage.getItem(KEYSTORE)||busy)return;
+  if(lsGet("cc-dirty",0)&&!PUSHING)pushFlags();
+  if(shown||typing())return;
+  if(!FEED||Date.now()-FEED_AT>900000)load();
+};
+window.hqGlance=function(){
+  var unlocked=!!localStorage.getItem(KEYSTORE),top=unlocked?topNow():null,d=new Date(),hh=d.getHours(),
+      end=(hh>=4&&hh<22)?22:(hh===22?23:(hh===23?24:0)),ta=$("inew"),t=lsGet(NIGHTS,{})[dk(eveDate())];
+  return JSON.stringify({unlocked:unlocked,feed:!!FEED,needs:top?top.length:-1,lvl:lvlNow(),
+    mins_left:end?(end-hh)*60-d.getMinutes():0,called:t?t.l:"",draft:!!(ta&&ta.value.trim()),
+    dirty:lsGet("cc-dirty",0)?1:0});
+};
+
 function draw(){
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){
     $("app").innerHTML='<div class="gate"><div class="kicker">The Program</div>'
       +'<h1>Unlock</h1><div class="note">One time on this device. The data on this page is '
-      +'encrypted; the passphrase never leaves your browser.</div>'
+      +'encrypted; the passphrase never leaves this device.</div>'
       +(err?'<div class="err">'+e(err)+'</div>':'')
       +'<input id="pw" type="password" placeholder="Passphrase" autocomplete="current-password">'
       +'<button id="go">Unlock</button></div>';
@@ -659,6 +755,7 @@ function draw(){
   }
   if(lane==="hq"){drawHQ();return}
   if(lane==="ideas"){drawIdeas();return}
+  if(lane==="panel"){drawPanel();return}
   var h='<div class="wrap"><div><div class="kicker">The Program</div>'
    +'<h1>'+e((LANES.filter(function(l){return l[0]===lane})[0]||["","" ])[1])+'</h1></div>'
    +tabsHTML();
@@ -703,7 +800,7 @@ document.addEventListener("click",function(ev){
   if(mt&&mt.dataset&&mt.dataset.a==="expand"){HQ_ALL=1;draw();return}
   var t=ev.target;
   if(t.id==="refresh"){load();return}
-  if(t.id==="iadd"){addIdea();return}
+  if(t.id==="iadd"){if(lane==="panel")panelSave();else addIdea();return}
   var tb=t.closest&&t.closest("[data-tag]");
   if(tb){var nf=tb.dataset.tag?"#"+tb.dataset.tag:"";IFILTER=(nf&&nf===IFILTER)?"":nf;var fi=$("ifind");if(fi)fi.value=IFILTER;redrawIdeas();return}
   var il=t.closest&&t.closest("li.idea");
@@ -730,16 +827,16 @@ document.addEventListener("click",function(ev){
       if(keyOf(i)===k)src=i})});
     if(!src)return;
     var cur=flagsFor(src);
-    setFlag(k,t.dataset.a,!cur[t.dataset.a],src);draw();return}
+    setFlag(k,t.dataset.a,t.dataset.a==="done"?!isDone(src):!cur[t.dataset.a],src);draw();return}
 });
 window.addEventListener("hashchange",function(){
   var l=location.hash.slice(1);
-  if(LANES.some(function(x){return x[0]===l})&&l!==lane){lane=l;FEED=null;load()}});
+  if((LANES.some(function(x){return x[0]===l})||l==="panel")&&l!==lane){lane=l;FEED=null;load()}});
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&FEED){syncPull()}});
-document.addEventListener("focusout",function(){setTimeout(function(){if(PEND&&!typing()){PEND=0;draw()}},50)});
+document.addEventListener("focusout",function(){setTimeout(function(){if(PEND&&!typing()){PEND=0;draw()}},400)});
 // keep the Lights Out countdown honest without stomping on typing
 setInterval(function(){
-  if(lane!=="hq"||!FEED)return;
+  if((lane!=="hq"&&lane!=="panel")||!FEED)return;
   var a=document.activeElement;
   if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))return;
   draw();
