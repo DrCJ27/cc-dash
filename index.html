@@ -96,10 +96,12 @@ font:500 12.5px/1.5 Oswald,sans-serif;letter-spacing:.04em;color:var(--muted)}
 li.mine{padding-left:15px}
 .more{border:1px solid var(--line);background:none;color:var(--cyan);border-radius:7px;padding:8px 12px;cursor:pointer;font:600 12px/1 Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase}
 .wrap.wide{max-width:1100px}.inew{width:100%;min-height:96px;resize:vertical;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:.7rem .8rem;color:var(--ink);font:inherit;font-size:16px;line-height:1.45}.inew:focus,.iedit:focus,.ifind:focus{outline:none;border-color:var(--cyan)}.iact{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}.ib{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);border-radius:7px;padding:7px 11px;cursor:pointer;font:600 12px/1 Oswald,sans-serif;letter-spacing:.08em;text-transform:uppercase}.ib:hover{border-color:var(--cyan);color:var(--cyan)}.ib.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);padding:9px 16px;font-size:13px}.ib.go:hover{color:var(--accent-ink);filter:brightness(1.05)}.ifind{margin-left:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:7px 10px;color:var(--ink);font:inherit;font-size:14px;width:150px;max-width:45%}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.tag{border:1px solid var(--line);background:var(--surface);color:var(--cyan);border-radius:999px;padding:4px 10px;cursor:pointer;font:600 12px/1 Oswald,sans-serif;letter-spacing:.06em}.tag em{font-style:normal;color:var(--muted)}.tag.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.tag.on em{color:var(--accent-ink)}.itext .tag{padding:1px 7px;font-size:12px;vertical-align:1px}ul.igrid{display:grid;grid-template-columns:1fr;gap:10px}@media(min-width:700px){ul.igrid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));align-items:start}}li.idea{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:9px;padding:11px 13px 11px;display:flex;flex-direction:column;gap:6px;min-width:0}li.idea.star{border-left-color:var(--accent)}li.idea.arch{opacity:.6;border-left-color:var(--line)}.ihead{display:flex;justify-content:space-between;align-items:center;gap:8px}.idate{font:500 12px/1 Oswald,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.ib.st{padding:4px 8px;font-size:15px;line-height:1}li.idea.star .ib.st{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.itext{color:var(--ink);font-size:15.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}.itext.clip .rest{display:none}.itext.clip.open .rest{display:inline}.itext a{color:var(--cyan);text-decoration:none;border-bottom:1px solid var(--line)}.iedit{width:100%;min-height:120px;resize:vertical;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:.6rem .7rem;color:var(--ink);font:inherit;font-size:15.5px;line-height:1.45}li.idea .iact{margin-top:2px}
+.weekstrip .wd{flex:1;min-width:0;text-align:center;border:1px solid var(--line);border-radius:7px;padding:6px 0 4px;background:none;cursor:pointer;font:600 12px/1.3 Oswald,sans-serif;letter-spacing:.06em;color:var(--muted)}.weekstrip .wd.today{color:var(--accent)}.weekstrip .wd.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}.weekstrip .wd.off{opacity:.55}.dot{display:block;width:6px;height:6px;border-radius:50%;margin:4px auto 0;background:transparent}.dot.on{background:var(--cyan)}.wnav{background:none;border:0;color:var(--cyan);font:600 15px/1 Oswald,sans-serif;padding:0 7px;cursor:pointer}.day{margin-top:12px;display:flex;flex-direction:column;gap:7px}.dtitle{font:600 14px/1.2 Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}.dstats{font-size:13.5px;color:var(--ink-2)}.dstats b,.desk b{color:var(--ink)}.dstats.amber{color:var(--warn)}.dact{border-left:3px solid var(--cyan);padding:2px 0 2px 9px;font-size:14px;color:var(--ink-2)}.dact b{color:var(--ink)}.dent{border-left:3px solid var(--accent);padding:2px 0 2px 9px}.dlog{min-height:70px}.desk{font-size:14px;color:var(--ink-2);margin-bottom:8px}.desk em{font-style:normal;color:var(--muted)}
 footer{border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:13px}
 </style></head><body><div id="app"></div>
 <script>
-var LANES=[["hq","The Program"],["todo","Today"],["ideas","Ideas"]];
+var LANES=[["hq","The Program"],["todo","Full board"],["ideas","Ideas"]];
+var TABS=[["hq","The Program"],["ideas","Ideas"]];
 var lane=(location.hash||"#hq").slice(1); if(!LANES.some(function(l){return l[0]===lane})&&lane!=="panel")lane="hq";
 function setFav(){}
 var KEYSTORE="cc-pass", FLAGS="cc-flags-", MINE="cc-mine-", IDEAS="cc-ideas", NIGHTS="cc-nights", HQCFG="cc-hq";
@@ -107,7 +109,7 @@ var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
 var OPEN={}, PEND=0, HQ_ALL=0, FOLDS={};   // open folds/cards, redraw deferred while typing, "+N more" expanded
 function typing(){var a=document.activeElement;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
 function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
-function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT};["inew","ifind","iedit","ai"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
+function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT};["inew","ifind","iedit","dlog","dmin"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
 function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie")return;var x=document.getElementById(id);if(!x)return;if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
 var HQ=lsGet0(HQCFG,null);           // {url,key} -- rides inside the encrypted todo feed
 var SYNC={state:HQ?"":"waiting for feed",ok:null};
@@ -310,7 +312,7 @@ async function pushFlags(knownUpd){
 }
 async function loadGlance(){
   if(!HQ)return;
-  try{var r=await hqPost({action:"glance"});if(r.ok){GLANCE=r.glance;drawSys()}}catch(x){}
+  try{var r=await hqPost({action:"glance"});if(r.ok){GLANCE=r.glance;softDraw()}}catch(x){}
 }
 function fireEvent(type,k,payload){
   if(!HQ)return;
@@ -362,7 +364,7 @@ async function load(){
     } else err=String(x.message||x);
   }
   busy=false; softDraw();
-  if(!err&&(lane==="hq"||flagLane()==="todo")){syncPull();loadGlance()}
+  if(!err&&(lane==="hq"||flagLane()==="todo")){syncPull();loadGlance();logSync()}
 }
 
 function clipWhat(txt,k){
@@ -411,7 +413,7 @@ function item(it){
 function mineHTML(){
   var mine=lsGet(MINE+"todo",[]),open=0,h="";
   h+='<h2>My list <em>yours alone, every device</em></h2>'
-   +'<div class="addrow"><input id="ai" placeholder="Add a to-do..."><button id="ab">Add</button></div><ul>';
+   +'<ul>';
   mine.forEach(function(m){if(m.done)return;open++;
     h+='<li class="item mine info" data-k="'+e(m.k)+'" data-mine="1"><button class="b-done" data-a="done">&#10003;</button>'
      +'<div class="what">'+e(m.who)+'</div></li>'});
@@ -436,10 +438,109 @@ function drawSys(){var s=$("sys");if(s)s.outerHTML=sysHTML()}
 
 function tabsHTML(){
   var h='<div class="tabs">';
-  LANES.forEach(function(l){h+='<button data-lane="'+l[0]+'"'+(l[0]===lane?' aria-current="true"':'')+'>'+l[1]+'</button>'});
-  return h+'<button id="refresh">Refresh</button></div>';
+  TABS.forEach(function(l){h+='<button data-lane="'+l[0]+'"'+(l[0]===lane?' aria-current="true"':'')+'>'+l[1]+'</button>'});
+  return h+'</div>';
 }
 
+/* ---------- THE WEEK: tap a day, see plan against what happened, log what you did ---------- */
+var LOG="cc-log",DAYSEL=null,WEEKOFF=0,LEDIT=null,LOGBUSY=null,LOG_START="2026-11-02";
+var RCODE=["TEN","ENGINE","GPP","ZERO","SWING","FINISH","OFF"];
+function logState(){return lsGet(LOG,{v:1,entries:{},mac:{},garmin:{}})}
+function hm(m){m=m||0;return m>=60?Math.floor(m/60)+'h '+(m%60)+'m':m+'m'}
+function workDay(k){return GLANCE&&GLANCE.counts&&GLANCE.counts.work_days&&GLANCE.counts.work_days[k]}
+function parseDay(k){var p=k.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function dayEntries(L,k){return Object.keys(L.entries).map(function(id){var x=L.entries[id];return {id:id,e:x}})
+  .filter(function(r){return r.e.date===k&&!r.e.deleted}).sort(function(a,b){return (a.e.ts||0)-(b.e.ts||0)})}
+function weekHTML(){
+  var ed=eveDate(),today=dk(ed),sel=DAYSEL||today,L=logState();
+  var mon=new Date(ed.getFullYear(),ed.getMonth(),ed.getDate()-((ed.getDay()+6)%7)+WEEKOFF*7);
+  var M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],lab=["M","T","W","T","F","S","S"];
+  var h='<div class="card"><div class="clabel">'+(WEEKOFF===0?'The week':'Week of '+M[mon.getMonth()]+' '+mon.getDate())
+   +'<span class="r"><button class="wnav" data-week="-1" aria-label="Earlier week">&lsaquo;</button>'+(WEEKOFF?'<button class="wnav" data-week="0">This week</button>':'')
+   +'<button class="wnav" data-week="1" aria-label="Later week">&rsaquo;</button></span></div><div class="weekstrip">';
+  for(var i=0;i<7;i++){var d=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i),k=dk(d),g=L.garmin[k];
+    var did=(g&&g.acts&&g.acts.length)||dayEntries(L,k).length;
+    h+='<button class="wd'+(k===today?' today':'')+(k===sel?' sel':'')+(d.getDay()===6?' off':'')+'" data-day="'+k+'">'+lab[i]+' '+d.getDate()
+     +'<br>'+RCODE[d.getDay()]+'<i class="dot'+(did?' on':'')+'"></i></button>'}
+  h+='</div>'+dayHTML(sel,today,L);
+  var pre=new Date()<S1;
+  h+='<div class="sub" style="margin-top:10px">'+(pre
+    ?('BLOCK 0 &middot; baseline runs through Sat Nov 8. Season 1 opens Mon Nov 9.')
+    :('SEASON 1 &middot; week '+(Math.floor((new Date()-S1)/604800000)+1)+' of 6.'))+'</div></div>';
+  return h;
+}
+function dayHTML(k,today,L){
+  var d=parseDay(k),R=RHYTHM[d.getDay()],names=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var h='<div class="day"><div class="dtitle">'+names[d.getDay()]+' '+M[d.getMonth()]+' '+d.getDate()+'</div><div class="sub">'+e(R[1])+'</div>';
+  if(k>today)return h+'</div>';
+  var w=workDay(k),n=lsGet(NIGHTS,{})[k],st=[];
+  if(w){st.push('At the desk <b>'+hm(w[0])+'</b>');if(w[2])st.push('calls and texts '+hm(w[2]));if(w[3])st.push('distracted '+hm(w[3]));
+    if(w[4]!==null&&w[4]!==undefined)st.push('athletes '+w[4])}
+  if(n)st.push('Lights Out <b>'+e(n.l)+'</b> at '+e(n.t||""));
+  if(st.length)h+='<div class="dstats">'+st.join(' &middot; ')+'</div>';
+  if(k<LOG_START)return h+'</div>';
+  var g=L.garmin[k],acts=(g&&g.acts)||[],rows=dayEntries(L,k),mac=L.mac[k]||{};
+  acts.forEach(function(a){var hr=a.avg_hr?' &middot; HR avg '+e(a.avg_hr)+', max '+e(a.max_hr):'';
+    h+='<div class="dact"><b>'+(a.run?'Run':'Cardio')+' '+e(a.min)+' min</b> &middot; '+e(a.start||"")+hr+'</div>'});
+  rows.forEach(function(r){
+    h+='<div class="dent"><div class="itext">'+e(r.e.text||"")+(r.e.minutes?' <em>('+e(r.e.minutes)+' min)</em>':'')+'</div>'
+     +'<div class="iact"><button class="ib" data-le="'+e(r.id)+'">Edit</button>'+(mac.status==="published"?'':'<button class="ib" data-ld="'+e(r.id)+'">Delete</button>')+'</div></div>'});
+  if(mac.status==="published"||mac.status==="draft"){
+    var u="https://circlefit.wodprep.com/admin/programming/workout?date="+k+"&track=1o1-coach-cj";
+    h+='<div class="dstats">'+(mac.status==="published"?'In your training log':'Saved as a draft, publishes the next morning')+' &middot; <a href="'+e(u)+'" target="_blank" rel="noopener noreferrer">CircleFit</a></div>'}
+  else if(mac.status==="needs_login")h+='<div class="dstats amber">Waiting on the CircleFit login. Saved, not lost.</div>';
+  else if(mac.status==="retrying")h+='<div class="dstats amber">CircleFit did not take it yet. Retrying.</div>';
+  var edit=LEDIT&&L.entries[LEDIT]&&L.entries[LEDIT].date===k?L.entries[LEDIT]:null;
+  var q=acts.length&&!rows.length?hm(acts.reduce(function(t,a){return t+(a.min||0)},0))+' on the watch. What was it?':'What did you do?';
+  h+='<textarea id="dlog" class="inew dlog" placeholder="'+e(q)+'">'+e(edit?edit.text:"")+'</textarea><div class="iact">'
+   +'<button class="ib go" id="dsave">'+(edit?'Save edit':'Log it')+'</button>'
+   +['Class','Own thing','Random'].map(function(c){return '<button class="ib" data-chip="'+c+'">'+c+'</button>'}).join('')
+   +(acts.length?'':'<input id="dmin" class="ifind" inputmode="numeric" placeholder="Minutes" value="'+e(edit&&edit.minutes||"")+'" style="width:90px">')
+   +(edit?'<button class="ib" id="dcancel">Cancel</button>':'')+'</div>';
+  return h+'</div>';
+}
+function logMerge(a,b){var o={v:1,entries:Object.assign({},a.entries),mac:Object.assign({},a.mac),garmin:Object.assign({},a.garmin)};
+  Object.keys(b.entries||{}).forEach(function(k){if((b.entries[k].ts||0)>=((o.entries[k]||{}).ts||0))o.entries[k]=b.entries[k]});
+  Object.keys(b.mac||{}).forEach(function(k){if((b.mac[k].mts||0)>=((o.mac[k]||{}).mts||0))o.mac[k]=b.mac[k]});
+  Object.keys(b.garmin||{}).forEach(function(k){if((b.garmin[k].gts||0)>=((o.garmin[k]||{}).gts||0))o.garmin[k]=b.garmin[k]});
+  return o}
+function logPrune(o){var c=dk(new Date(Date.now()-30*86400000));
+  Object.keys(o.entries).forEach(function(k){if((o.entries[k].date||"")<c)delete o.entries[k]});
+  ["mac","garmin"].forEach(function(n){Object.keys(o[n]).forEach(function(k){if(k<c)delete o[n][k]})});return o}
+function logPull0(){return hqPost({action:"read_blob",kind:"log"}).then(function(r){
+  if(r.ok&&r.data)return decrypt(JSON.parse(r.data),localStorage.getItem(KEYSTORE)).then(function(rem){
+      lsSet(LOG,logPrune(logMerge(logState(),rem)));return r.updated||""})
+  if(r.error==="not_found")return "";throw new Error("read failed")})}
+function logSync(){            // pull, merge, write only when this device has something new
+  if(!HQ||!localStorage.getItem(KEYSTORE))return Promise.resolve();
+  if(LOGBUSY)return LOGBUSY;
+  LOGBUSY=(async function(){
+    try{
+      var before=JSON.stringify(logState()),upd=await logPull0();
+      for(var i=0;i<2&&lsGet("cc-log-dirty",0);i++){
+        var blob=await encryptJSON(logState(),localStorage.getItem(KEYSTORE));
+        if(JSON.stringify(blob).length>45000){SYNC.state="training log too big to sync. Tell Claude.";SYNC.ok=false;break}
+        var w=await hqPost({action:"blob",kind:"log",data:JSON.stringify(blob),if_updated:upd});
+        if(w.ok){lsSet("cc-log-dirty",0);break}
+        if(w.error==="conflict"){upd=await logPull0();continue}
+        break;
+      }
+      if(JSON.stringify(logState())!==before)softDraw();
+    }catch(x){}
+    finally{LOGBUSY=null}
+  })();
+  return LOGBUSY;
+}
+function logSave(){
+  var ta=$("dlog"),mi=$("dmin"),v=ta?ta.value.trim():"";if(!v)return;
+  var L=logState(),k=DAYSEL||dk(eveDate()),id=LEDIT||("log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  var mn=mi&&mi.value.trim()?parseInt(mi.value,10)||null:null;
+  L.entries[id]={date:k,text:v,minutes:mn,ts:Date.now()};
+  lsSet(LOG,L);lsSet("cc-log-dirty",1);LEDIT=null;ta.value="";if(mi)mi.value="";
+  try{localStorage.removeItem("cc-log-draft")}catch(x){}
+  draw();logSync();
+}
 function lightsOutHTML(){
   var now=new Date(),ed=eveDate(),day=ed.getDay();
   var nights=lsGet(NIGHTS,{}),tonight=nights[dk(ed)],h="";
@@ -453,6 +554,9 @@ function lightsOutHTML(){
   else if(hr===23)cd='Scaled closes at midnight';
   else cd='Past midnight. Log it anyway.';
   h+='<span class="r">'+cd+'</span></div>';
+  var wd=workDay(dk(ed));
+  if(wd){var hb=GLANCE.last_heartbeat?(Date.now()-new Date(GLANCE.last_heartbeat).getTime())/60000:0;
+    h+='<div class="desk">At the desk today <b>'+hm(wd[0])+'</b>'+(hb>30?' <em>as of '+new Date(GLANCE.last_heartbeat).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+'</em>':'')+'</div>'}
   if(tonight){
     h+='<div class="won"><span class="lvl">'+e(tonight.l)+'</span>'
      +'<span class="d">called at '+e(tonight.t||"")+' &middot; streak '+streakOf(nights)
@@ -472,18 +576,7 @@ function lightsOutHTML(){
   }
   h+='</div>';
 
-  // Week strip
-  var labels=["M","T","W","T","F","S","S"],map=[1,2,3,4,5,6,0];
-  h+='<div class="card"><div class="clabel">The week</div><div class="weekstrip">';
-  map.forEach(function(d,i){
-    h+='<div class="'+(d===day?"today":"")+(d===6?" off":"")+'">'+labels[i]+'<br>'
-     +["TEN","ENGINE","GPP","ZERO","SWING","FINISH","OFF"][ (d===0)?0:d ]+'</div>'});
-  h+='</div>';
-  var pre=now<S1;
-  h+='<div class="sub" style="margin-top:10px">'+(pre
-    ?('BLOCK 0 &middot; baseline runs through Sat Nov 8. Season 1 opens Mon Nov 9 -- every night and every Sunday counts from there.')
-    :('SEASON 1 &middot; week '+(Math.floor((now-S1)/604800000)+1)+' of 6.'))+'</div></div>';
-
+  h+=weekHTML();
   return h;
 }
 function topNow(){   // Needs you now after dedupe + ranking; null until the feed is in
@@ -542,7 +635,7 @@ function listsHTML(){
       h+='<div class="col"><h2 class="tog'+(op?' open':'')+'" data-fold="'+e(s.id)+'">'+e((s.h||"").replace(/^CJ.s list: /,""))+' <em>'+its.length+(s.em?' &middot; '+e(s.em):'')+'</em></h2><ul'+(op?'':' hidden')+'>';
       its.forEach(function(i){h+=item(i)});h+='</ul></div>';
     });
-    h+='</div>';
+    h+='</div><div class="expand"><button class="more" data-lane="todo">Full board &rarr;</button></div>';
   return h;
 }
 function wireCallIt(){
@@ -567,7 +660,7 @@ function drawHQ(){
   if(busy)h+='<div class="note">Loading&hellip;</div>';
   if(err)h+='<div class="err">'+e(err)+'</div>';
 
-  h+=lightsOutHTML();
+  h+=lightsOutHTML()+captureHTML()+mineHTML().h;
 
   if(FEED){
     // ONE list, FOUR columns on a wide screen (CJ, Nov 4 2026: "we could probably go with
@@ -576,12 +669,12 @@ function drawHQ(){
     // deduped by the name the card opens with. On a phone the columns stack and the three
     // groups fold behind their headings.
     h+=listsHTML();
-    var mh=mineHTML();h+=mh.h;
   }
   h+=sysHTML();
   h+='<footer>Cleared stays cleared until the thing itself changes.</footer></div>';
+  var foc0=document.activeElement&&document.activeElement.id==="inew";
   var dr=snapDrafts();$("app").innerHTML=h;restoreDrafts(dr);
-  wireCallIt();
+  wireCallIt();wireCapture(foc0);
 }
 function now2(){var d=new Date(),h=d.getHours(),m=("0"+d.getMinutes()).slice(-2),
   ap=h>=12?"PM":"AM";h=h%12;if(!h)h=12;return h+":"+m+" "+ap}
@@ -697,6 +790,32 @@ function ideaAct(k,a){
 /* ---------- MENU BAR PANEL (hq/menubar, Nov 4 2026). "Full HQ, Ideas on top." Read-only hooks:
    no secret crosses to the native side, only counts and a clock. ---------- */
 var QUICK=false,FEED_AT=0,LOAD_AT=0,DRAFT="cc-idea-draft";
+function captureHTML(){
+  var kb=window.matchMedia&&window.matchMedia("(hover:hover)").matches,n=openIdeas();
+  return '<div class="card gold"><div class="clabel">Get it out of your head'+(kb?'<span class="r">Enter = idea &middot; &#8984; Enter = to-do</span>':'')+'</div>'
+   +'<textarea id="inew" class="inew" placeholder="What is it..."></textarea>'
+   +'<div class="iact"><button class="ib go" id="iadd">Idea</button><button class="ib go" id="itodo">To-do</button>'
+   +'<button class="ib" data-lane="ideas">'+n+(n===1?' idea':' ideas')+' &rarr;</button></div></div>';
+}
+function wireCapture(foc){
+  var ta=$("inew");if(!ta)return;
+  var kb=window.matchMedia&&window.matchMedia("(hover:hover)").matches;
+  if(!ta.value)ta.value=lsGet(DRAFT,"");
+  ta.oninput=function(){lsSet(DRAFT,ta.value)};
+  ta.onkeydown=function(ev){
+    if(ev.key!=="Enter"||ev.shiftKey||ev.isComposing)return;
+    if(ev.metaKey||ev.ctrlKey){ev.preventDefault();addTodo();return}
+    if(!kb)return;                  // phone Return is a new line; the buttons save
+    ev.preventDefault();if(ta.value.trim())panelSave();};
+  if(foc){ta.focus();ta.selectionStart=ta.value.length}
+}
+function addTodo(){
+  var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
+  var q=QUICK,m=lsGet(MINE+"todo",[]);
+  m.push({k:"mine-"+Date.now(),who:v,ts:Date.now()});lsSet(MINE+"todo",m);
+  ta.value="";try{localStorage.removeItem(DRAFT)}catch(x){}
+  queuePush(1);draw();if(q)nativeClose();
+}
 function nativeClose(){try{window.webkit.messageHandlers.hq.postMessage("close")}catch(x){}}
 function openIdeas(){return lsGet(IDEAS,[]).filter(function(i){return i&&!i.arch}).length}
 function drawPanel(){
@@ -704,28 +823,19 @@ function drawPanel(){
   var h='<div class="wrap">'+tabsHTML();
   if(busy&&!FEED)h+='<div class="note">Loading&hellip;</div>';
   if(err)h+='<div class="err">'+e(err)+'</div>';
-  h+='<div class="card gold"><div class="clabel">New idea<span class="r">Enter saves &middot; Shift+Enter new line &middot; Esc closes</span></div>'
-   +'<textarea id="inew" class="inew" placeholder="What is it..."></textarea>'
-   +'<div class="iact"><button class="ib go" id="iadd">Save idea</button>'
-   +'<button class="ib" data-lane="ideas">'+openIdeas()+(openIdeas()===1?' idea':' ideas')+' &rarr;</button></div></div>';
-  if(FEED)h+=listsHTML()+mineHTML().h;
+  h+=captureHTML()+mineHTML().h;
+  if(FEED)h+=listsHTML();
   h+=lightsOutHTML()+sysHTML()+'</div>';
   var dr=snapDrafts();$("app").innerHTML=h;restoreDrafts(dr);
   wireCallIt();
-  var ta=$("inew");
-  if(ta){if(!ta.value)ta.value=lsGet(DRAFT,"");   // a half-typed idea survives a reload, quit or crash
-    ta.oninput=function(){lsSet(DRAFT,ta.value)};
-    ta.onkeydown=function(ev){
-      if(ev.key==="Enter"&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();
-        if(!ta.value.trim())return;
-        panelSave();}};
-    if(foc){ta.focus();ta.selectionStart=ta.value.length}}
+  wireCapture(foc);
 }
 function panelSave(){var q=QUICK;try{localStorage.removeItem(DRAFT)}catch(x){}addIdea();if(q)nativeClose()}
 document.addEventListener("keydown",function(ev){if(ev.key==="Escape")nativeClose()});   // no-op in a browser
 window.hqOpen=function(quick){
   QUICK=!!quick;
   if(lane!=="panel"){lane="panel";location.hash="#panel";draw()}
+  comeBack();
   if(quick){var t=$("inew")||$("pw");if(t){t.focus();if(t.selectionStart!==undefined)t.selectionStart=t.value.length}}
 };
 window.hqFlush=function(){      // panel closed: stop counting as "typing" so refresh and the count stay live
@@ -739,6 +849,7 @@ window.hqTick=function(shown){      // native calls every 60s: keep a long-runni
   if(!localStorage.getItem(KEYSTORE)||busy)return;
   if(lsGet("cc-dirty",0)&&!PUSHING)pushFlags();
   if(shown||typing())return;
+  loadGlance();logSync();
   if(!FEED||Date.now()-FEED_AT>900000)load();
 };
 window.hqGlance=function(){
@@ -810,9 +921,18 @@ document.addEventListener("click",function(ev){
     var mk="m:"+(w.dataset.mk||"");if(w.classList.contains("open"))OPEN[mk]=1;else delete OPEN[mk];
     mt.textContent=w.classList.contains("open")?"less":"more";ev.stopPropagation();return}
   if(mt&&mt.dataset&&mt.dataset.a==="expand"){HQ_ALL=1;draw();return}
+  var dayb=mt&&mt.closest?mt.closest("[data-day]"):null;
+  if(dayb){DAYSEL=dayb.dataset.day;LEDIT=null;var dl=$("dlog");if(dl)dl.value="";var dm=$("dmin");if(dm)dm.value="";draw();return}
+  if(mt&&mt.dataset&&mt.dataset.week!==undefined){var wk=+mt.dataset.week;WEEKOFF=wk===0?0:WEEKOFF+wk;DAYSEL=null;draw();return}
+  if(mt&&mt.dataset&&mt.dataset.chip){var cl=$("dlog");if(cl){cl.value=mt.dataset.chip+(cl.value?": "+cl.value:". ");cl.focus();cl.selectionStart=cl.value.length}return}
+  if(mt&&mt.id==="dsave"){logSave();return}
+  if(mt&&mt.id==="dcancel"){LEDIT=null;var dc=$("dlog");if(dc)dc.value="";draw();return}
+  if(mt&&mt.dataset&&mt.dataset.le){LEDIT=mt.dataset.le;var de=$("dlog");if(de)de.value="";draw();return}
+  if(mt&&mt.dataset&&mt.dataset.ld){var LL=logState(),ld=LL.entries[mt.dataset.ld];if(ld){ld.deleted=1;ld.ts=Date.now();lsSet(LOG,LL);lsSet("cc-log-dirty",1);draw();logSync()}return}
   var t=ev.target;
   if(t.id==="refresh"){load();return}
-  if(t.id==="iadd"){if(lane==="panel")panelSave();else addIdea();return}
+  if(t.id==="iadd"){if(lane==="panel"||lane==="hq")panelSave();else addIdea();return}
+  if(t.id==="itodo"){addTodo();return}
   var tb=t.closest&&t.closest("[data-tag]");
   if(tb){var nf=tb.dataset.tag?"#"+tb.dataset.tag:"";IFILTER=(nf&&nf===IFILTER)?"":nf;var fi=$("ifind");if(fi)fi.value=IFILTER;redrawIdeas();return}
   var il=t.closest&&t.closest("li.idea");
@@ -844,7 +964,8 @@ document.addEventListener("click",function(ev){
 window.addEventListener("hashchange",function(){
   var l=location.hash.slice(1);
   if((LANES.some(function(x){return x[0]===l})||l==="panel")&&l!==lane){lane=l;FEED=null;load()}});
-document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&FEED){syncPull()}});
+function comeBack(){if(!FEED)return;if(Date.now()-FEED_AT>300000&&!typing()&&!busy){load();logSync();return}syncPull();logSync();loadGlance()}
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")comeBack()});
 document.addEventListener("focusout",function(){setTimeout(function(){if(PEND&&!typing()){PEND=0;draw()}},400)});
 // keep the Lights Out countdown honest without stomping on typing
 setInterval(function(){
