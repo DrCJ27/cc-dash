@@ -241,6 +241,14 @@ function mergeMine(loc,rem){var m={};
     var c=m[it.k];if(!c||entTs(it)>=entTs(c))m[it.k]=it});
   return Object.keys(m).map(function(k){return m[k]})
     .sort(function(a,b){return entTs(a)-entTs(b)});}
+// Fields beyond the original four ride along untouched, so a device on an older copy of the page can
+// never erase them. Maps union; an entry carrying its own ts is newest-wins as a whole.
+var EXTRA="cc-extra",KNOWN_KEYS={v:1,ts:1,flags:1,mine:1,ideas:1,nights:1};
+function deepMerge(a,b){
+  if(a===undefined)return b;if(b===undefined)return a;
+  if(a===null||b===null||typeof a!=="object"||typeof b!=="object")return a;
+  if(typeof a.ts==="number"||typeof b.ts==="number")return entTs(b)>entTs(a)?b:a;
+  var o=Object.assign({},a);Object.keys(b).forEach(function(k){o[k]=deepMerge(a[k],b[k])});return o}
 function mergeNights(loc,rem){var o=Object.assign({},loc);
   Object.keys(rem||{}).forEach(function(k){if(entTs(rem[k])>entTs(o[k]))o[k]=rem[k]});return o}
 var SYNCING=null, PUSHING=null, REPUSH=0;
@@ -255,6 +263,9 @@ async function pullMerge(){
       lsSet(MINE+"todo",mergeMine(lsGet(MINE+"todo",[]),rem.mine));
       lsSet(IDEAS,mergeMine(lsGet(IDEAS,[]),rem.ideas));
       lsSet(NIGHTS,mergeNights(lsGet(NIGHTS,{}),rem.nights));
+      var ex=lsGet(EXTRA,{});
+      Object.keys(rem).forEach(function(k){if(KNOWN_KEYS[k])return;ex[k]=deepMerge(ex[k],rem[k])});
+      lsSet(EXTRA,ex);
     }catch(x){throw new Error("unreadable")}   // never overwrite what we cannot read (passphrase rotated?)
     return r.updated||"";
   }
@@ -293,8 +304,8 @@ async function pushFlags(knownUpd){
       for(var attempt=0;attempt<2;attempt++){
         pruneFlags();
         var gen=PGEN;
-        var state={v:1,ts:Date.now(),flags:lsGet(FLAGS+"todo",{}),
-          mine:lsGet(MINE+"todo",[]),ideas:lsGet(IDEAS,[]),nights:lsGet(NIGHTS,{})};
+        var state=Object.assign({},lsGet(EXTRA,{}),{v:1,ts:Date.now(),flags:lsGet(FLAGS+"todo",{}),
+          mine:lsGet(MINE+"todo",[]),ideas:lsGet(IDEAS,[]),nights:lsGet(NIGHTS,{})});
         var blob=await encryptJSON(state,localStorage.getItem(KEYSTORE));
         if(JSON.stringify(blob).length>45000){SYNC.state="too big to sync. Ideas are safe on this device. Tell Claude.";SYNC.ok=false;break}
         var r=await hqPost({action:"blob",kind:"flags",data:JSON.stringify(blob),if_updated:upd,
