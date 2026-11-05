@@ -610,7 +610,7 @@ function seasonData(){return lsGet("cc-season",null)}
 function addDays(k,n){var d=parseDay(k);d.setDate(d.getDate()+n);return dk(d)}
 function pausedOn(k){var p=ex().pauses||{};return Object.keys(p).some(function(id){var r=p[id];return r.from&&k>r.from&&(!r.to||k<r.to)})}
 function isPaused(){var p=ex().pauses||{};return Object.keys(p).filter(function(id){return !p[id].to}).sort().pop()||null}
-function discTaps(m){return Object.keys(m||{}).filter(function(t){return m[t]===1||(m[t]&&m[t].on)})}   // ===1: taps from the first version tonight
+function discTaps(m){var cut=(ex().disc_reset||{}).at||0;return Object.keys(m||{}).filter(function(t){return +t>cut&&(m[t]===1||(m[t]&&m[t].on))})}   // ===1: taps from the first version tonight
 function discDay(k){var d=(ex().disc||{})[k]||{};return {held:discTaps(d.held).length,slip:discTaps(d.slip).length>0}}
 function discTap(kind){var o=ex(),k=dk(eveDate()),t=String(Date.now());o.disc=o.disc||{};o.disc[k]=o.disc[k]||{};o.disc[k][kind]=o.disc[k][kind]||{};
   o.disc[k][kind][t]={on:1,ts:Date.now()};exSave(o);return ((ex().disc||{})[k]||{})[kind]&&ex().disc[k][kind][t]?true:false}
