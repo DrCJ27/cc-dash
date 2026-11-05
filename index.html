@@ -616,6 +616,7 @@ function discTap(kind){var o=ex(),k=dk(eveDate()),t=String(Date.now());o.disc=o.
   o.disc[k][kind][t]={on:1,ts:Date.now()};exSave(o);return ((ex().disc||{})[k]||{})[kind]&&ex().disc[k][kind][t]?true:false}
 function discSyncText(){var d=lsGet("cc-dirty",0);
   if(!HQ)return "saved on this device";
+  if(/too big|unreadable/.test(SYNC.state||""))return SYNC.state;
   if(d)return SYNC.ok===false?"offline. Saved here, will send":"sending";
   return SYNC.ok===false?"offline":"synced"}
 // Clean days count themselves once the day is over. Nothing resets: clean this month, best run, comeback.
@@ -633,7 +634,8 @@ function discHTML(){
   return h}
 function nightScore(k,n){            // his tap, checked against the tracker: called it, then worked on = the later time counts
   if(!n)return {l:"",p:0};
-  var sd=seasonData(),ms=(sd&&sd.late&&sd.late[k]||[]).filter(function(t){return t*1000>(n.ts||0)}),l=n.l,late="";
+  var sd=seasonData(),ms=[],l=n.l,late="";
+  (sd&&sd.late&&sd.late[k]||[]).forEach(function(r){for(var i=0;i<r[1];i++){var t=r[0]+i*62;if(t*1000>(n.ts||0))ms.push(t)}});
   if(ms.length>15){var dt=new Date(ms[ms.length-1]*1000),hr=dt.getHours();
     l=(hr>=4&&hr<22)?"RX+":(hr===22?"RX":(hr===23?"SCALED":"LATE"));
     late=dt.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}
@@ -646,7 +648,7 @@ function exList(wk){return (ex().excused||{})[wk]||{}}
 function boss(wk){            // the Sunday for programming week wk, with his own "did that one by hand" marks
   var sd=seasonData(),w=sd&&sd.weeks&&sd.weeks[wk];if(!w)return null;
   var cut=new Date(w.cut).getTime(),closed=Date.now()>=cut,m=exList(wk);
-  var marked=function(r){var x=m[r[0]];return x&&x.on&&(x.ts||0)<cut};
+  var marked=function(r){var x=m[r[0]];return x&&x.on&&(x.ts||0)<cut&&!r[2]};
   var left=w.left.filter(function(r){return !marked(r)}),n=(w.n||0)-(w.left.length-left.length);
   var tracksOK=(w.tracks||0)>=TRACKS_NEEDED;
   var lv=!tracksOK?"":(n===0?"Rx+":(n<=5?"Rx":(n<=10?"Scaled":"")));
@@ -679,12 +681,11 @@ function seasonTotals(){
 function questsHTML(){
   var ed=eveDate(),today=dk(ed),dow=ed.getDay(),L=logState(),rows=[];
   var nextMon=addDays(today,((8-dow)%7)||7),b=boss(nextMon);
-  var prevB=boss(addDays(nextMon,-7));
-  if(dow===0&&prevB&&prevB.closed){
-    rows.push([!!prevB.lv,prevB.lv?'Clean Sunday, '+prevB.lv+'. Enjoy it.':prevB.n+' left this Sunday. Next Saturday is the next shot.'])}
+  if(dow===0&&b&&b.closed){
+    rows.push([!!b.lv,b.lv?'Clean Sunday, '+b.lv+'. Enjoy it.':b.n+' left this Sunday. Next Saturday is the next shot.'])}
   else if(b&&dow>=4){
     var need=Math.max(0,b.n-10),nights=dow===4?3:(dow===5?2:1),pace=Math.ceil(need/nights);
-    rows.push([need===0,need?(b.w.roster-b.n)+' of '+b.w.roster+' done. '+pace+' tonight keeps Clean Sunday.':'Clean Sunday is on, '+b.n+' left.'])}
+    rows.push([need===0,need?(b.w.roster-b.n)+' of '+b.w.roster+' done. '+pace+' tonight keeps Clean Sunday.':(b.tracksOK?'Clean Sunday is on, '+b.n+' left.':b.n+' left. Tracks: '+(b.w.tracks||0)+' of '+TRACKS_NEEDED+' live.')])}
   else rows.push([false,RHYTHM[dow][1]]);
   rows.push([sessionOn(today,L).ok,'Train today']);
   var dd=discDay(today);rows.push([!dd.slip,'Discipline']);
@@ -692,7 +693,7 @@ function questsHTML(){
 function bossRow(wk,label){
   var b=boss(wk);if(!b)return '';
   var op=OPEN["b:"+wk],can=b.w.left.length>0;
-  var res=b.closed?(b.lv?b.lv+(b.saturdayOff?', Saturday off':''):b.n+' left'+(b.tracksOK||b.n>10?'':', tracks not live')):b.n+' left';
+  var res=b.closed?(b.lv?b.lv+(b.saturdayOff?', Saturday off':''):b.n+' left'+(b.tracksOK||b.n>10?'':', tracks not live')):b.n+' left'+(b.tracksOK||b.n>10?'':', tracks '+(b.w.tracks||0)+' of '+TRACKS_NEEDED);
   var h='<button class="brow gd'+(op?' open':'')+'"'+(can?' data-boss="'+wk+'"':' disabled')+'><span>'+e(label)+'</span><b>'+e(res)+'</b></button>';
   if(op){var m=exList(wk);h+='<div class="blist">'+(b.closed?'':'<div class="bl one">Done by hand before Saturday night? Tap them.</div>');
     b.w.left.forEach(function(r){var on=m[r[0]]&&m[r[0]].on;
@@ -1119,7 +1120,7 @@ document.addEventListener("click",function(ev){
   if(mt&&mt.id==="dunslip"){var eu=ex(),ku=dk(eveDate()),su=((eu.disc||{})[ku]||{}).slip||{};Object.keys(su).forEach(function(t){su[t]={on:0,ts:Date.now()}});DISCMSG="";exSave(eu);draw();return}
   var bb=mt&&mt.closest?mt.closest("[data-boss]"):null;
   if(bb){var bk0="b:"+bb.dataset.boss;if(OPEN[bk0])delete OPEN[bk0];else OPEN[bk0]=1;draw();return}
-  if(mt&&mt.dataset&&mt.dataset.exc){var pr=mt.dataset.exc.split("|"),ee=ex();ee.excused=ee.excused||{};ee.excused[pr[0]]=ee.excused[pr[0]]||{};var cu=ee.excused[pr[0]][pr[1]];ee.excused[pr[0]][pr[1]]={on:cu&&cu.on?0:1,ts:Date.now()};exSave(ee);draw();return}
+  if(mt&&mt.dataset&&mt.dataset.exc){var pr=mt.dataset.exc.split("|"),ee=ex(),cb=boss(pr[0]);if(cb&&cb.closed){draw();return}ee.excused=ee.excused||{};ee.excused[pr[0]]=ee.excused[pr[0]]||{};var cu=ee.excused[pr[0]][pr[1]];ee.excused[pr[0]][pr[1]]={on:cu&&cu.on?0:1,ts:Date.now()};exSave(ee);draw();return}
   if(mt&&mt.dataset&&mt.dataset.spend){var ki=mt.dataset.spend;if(SPENDASK!==ki){SPENDASK=ki;draw();return}SPENDASK=null;var ep=ex();ep.spent=ep.spent||{};ep.spent[Date.now()]={kind:ki,ts:Date.now()};exSave(ep);draw();return}
   if(SPENDASK){SPENDASK=null}
   if(mt&&mt.id==="spause"){var ea=ex(),op0=isPaused();ea.pauses=ea.pauses||{};
