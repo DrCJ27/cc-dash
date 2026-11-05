@@ -455,7 +455,7 @@ function dayEntries(L,k){return Object.keys(L.entries).map(function(id){var x=L.
   .filter(function(r){return r.e.date===k&&!r.e.deleted}).sort(function(a,b){return (a.e.ts||0)-(b.e.ts||0)})}
 function weekHTML(){
   var ed=eveDate(),today=dk(ed),L=logState();
-  if(DAYSET!==today){DAYSET=today;DAYSEL=null;WEEKOFF=0;LEDIT=null}    // a new day opens on the new day
+  if(DAYSET!==today){if(DAYSET){var rl=$("dlog");if(rl)rl.value="";var rm=$("dmin");if(rm)rm.value=""}DAYSET=today;DAYSEL=null;WEEKOFF=0;LEDIT=null}    // a new day opens on the new day
   var mon=new Date(ed.getFullYear(),ed.getMonth(),ed.getDate()-((ed.getDay()+6)%7)+WEEKOFF*7);
   if(!DAYSEL&&WEEKOFF)DAYSEL=dk(mon);
   var sel=DAYSEL||today;
@@ -527,7 +527,7 @@ function dayHTML(k,today,L){
   rows.forEach(function(r){
     h+='<div class="dent"><div class="itext">'+e(r.e.text||"")+(r.e.minutes?' <em>('+e(r.e.minutes)+' min)</em>':'')+'</div>'
      +'<div class="iact"><button class="ib" data-le="'+e(r.id)+'">Edit</button>'+'<button class="ib" data-ld="'+e(r.id)+'">'+(DELASK===r.id?'Tap again to delete':'Delete')+'</button></div></div>'});
-  if(mac.status==="published"||mac.status==="draft"){
+  if(mac.status==="published"||(mac.status==="draft"&&rows.length)){
     var u="https://circlefit.wodprep.com/admin/programming/workout?date="+k+"&track=1o1-coach-cj";
     h+='<div class="dstats">'+(mac.status==="published"?'In your training log':'Draft. Publishes the next morning')+' &middot; <a href="'+e(u)+'" target="_blank" rel="noopener noreferrer">CircleFit</a></div>'}
   else if(mac.status==="needs_login")h+='<div class="dstats amber">Saved. It publishes once the CircleFit login is refreshed.</div>';
@@ -580,12 +580,12 @@ function logSync(){            // pull, merge, write only when this device has s
 }
 function logSave(){
   var ta=$("dlog"),mi=$("dmin"),v=ta?ta.value.trim():"";if(!v)return;
-  var L=logState(),k=DAYSEL||dk(eveDate()),id=LEDIT||("log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  var L=logState(),k=DAYSEL||DAYSET||dk(eveDate()),id=LEDIT||("log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   var mn=mi&&mi.value.trim()?parseInt(mi.value,10)||null:null;
   var was=LEDIT&&L.entries[LEDIT];
   L.entries[id]={date:was?was.date:k,text:v,minutes:mn,ts:Date.now()};      // an edit never moves the entry to another day
   LGEN++;lsSet(LOG,L);lsSet("cc-log-dirty",1);LEDIT=null;ta.value="";if(mi)mi.value="";
-  try{localStorage.removeItem(draftKey(k))}catch(x){}
+  if(!was)try{localStorage.removeItem(draftKey(k))}catch(x){}
   draw();logSync();
 }
 function lightsOutHTML(){
@@ -968,17 +968,18 @@ document.addEventListener("click",function(ev){
     var mk="m:"+(w.dataset.mk||"");if(w.classList.contains("open"))OPEN[mk]=1;else delete OPEN[mk];
     mt.textContent=w.classList.contains("open")?"less":"more";ev.stopPropagation();return}
   if(mt&&mt.dataset&&mt.dataset.a==="expand"){HQ_ALL=1;draw();return}
+  if(DELASK&&!(mt&&mt.dataset&&mt.dataset.ld)){DELASK=null;if($("dlog"))draw()}
   var brk=mt&&mt.closest?mt.closest("[data-brk]"):null;
   if(brk){var bk="w:"+(DAYSEL||dk(eveDate()))+brk.dataset.brk;if(OPEN[bk])delete OPEN[bk];else OPEN[bk]=1;draw();return}
   var dayb=mt&&mt.closest?mt.closest("[data-day]"):null;
   if(dayb){if(dayb.dataset.day===(DAYSEL||DAYSET))return;DAYSEL=dayb.dataset.day;LEDIT=null;var dl=$("dlog");if(dl)dl.value="";var dm=$("dmin");if(dm)dm.value="";draw();return}
-  if(mt&&mt.dataset&&mt.dataset.week!==undefined){var wk=+mt.dataset.week;WEEKOFF=wk===0?0:WEEKOFF+wk;DAYSEL=null;var dw=$("dlog");if(dw)dw.value="";draw();return}
+  if(mt&&mt.dataset&&mt.dataset.week!==undefined){var wk=+mt.dataset.week;WEEKOFF=wk===0?0:WEEKOFF+wk;DAYSEL=null;LEDIT=null;var dw=$("dlog");if(dw)dw.value="";var dx=$("dmin");if(dx)dx.value="";draw();return}
   if(mt&&mt.dataset&&mt.dataset.chip){var cl=$("dlog");if(cl){cl.value=mt.dataset.chip+(cl.value?": "+cl.value:". ");cl.focus();cl.selectionStart=cl.value.length}return}
   if(mt&&mt.id==="dsave"){logSave();return}
-  if(mt&&mt.id==="dcancel"){LEDIT=null;var dc=$("dlog");if(dc)dc.value="";draw();return}
+  if(mt&&mt.id==="dcancel"){LEDIT=null;var dc=$("dlog");if(dc)dc.value="";var dn=$("dmin");if(dn)dn.value="";draw();return}
   if(mt&&mt.dataset&&mt.dataset.le){LEDIT=mt.dataset.le;var de=$("dlog");if(de)de.value="";var dd=$("dmin");if(dd)dd.value="";draw();return}
   if(mt&&mt.dataset&&mt.dataset.ld){if(DELASK!==mt.dataset.ld){DELASK=mt.dataset.ld;draw();return}
-    var LL=logState(),ld=LL.entries[mt.dataset.ld];DELASK=null;if(ld){ld.deleted=1;ld.ts=Date.now();LGEN++;lsSet(LOG,LL);lsSet("cc-log-dirty",1);draw();logSync()}return}
+    var LL=logState(),ld=LL.entries[mt.dataset.ld];DELASK=null;if(LEDIT===mt.dataset.ld){LEDIT=null;var dq=$("dlog");if(dq)dq.value=""}if(ld){ld.deleted=1;ld.ts=Date.now();LGEN++;lsSet(LOG,LL);lsSet("cc-log-dirty",1);draw();logSync()}return}
   var t=ev.target;
   if(t.id==="refresh"){load();return}
   if(t.id==="iadd"){if(lane==="panel"||lane==="hq")panelSave();else addIdea();return}
@@ -1020,7 +1021,7 @@ function workPull(){if(!HQ||!localStorage.getItem(KEYSTORE))return;
 var LAST_TICK=0;
 function comeBack(){if(!FEED)return;workPull();if(Date.now()-FEED_AT>300000&&!typing()&&!busy){load();logSync();return}syncPull();logSync();loadGlance()}
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")comeBack()});
-document.addEventListener("input",function(ev){var t=ev.target;if(t&&t.id==="dlog"&&!LEDIT)lsSet(draftKey(DAYSEL||dk(eveDate())),t.value)});
+document.addEventListener("input",function(ev){var t=ev.target;if(t&&t.id==="dlog"&&!LEDIT)lsSet(draftKey(DAYSEL||DAYSET||dk(eveDate())),t.value)});
 document.addEventListener("focusout",function(){setTimeout(function(){if(PEND&&!typing()){PEND=0;draw()}},400)});
 // keep the Lights Out countdown honest without stomping on typing
 setInterval(function(){
