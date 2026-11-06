@@ -1158,7 +1158,7 @@ function mineListHTML(){var mine=lsGet(MINE+"todo",[]).filter(function(m){return
 function addProg(){
   var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
   var q=QUICK,sd=seasonData(),names=(sd&&sd.names)||[],ath="";
-  names.forEach(function(n){if(!ath&&new RegExp("\\b"+n+"\\b").test(v))ath=n});
+  names.forEach(function(n){if(!ath&&new RegExp("\\b"+n+"\\b","i").test(v))ath=n});
   var all=lsGet(IDEAS,[]);all.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:v,ts:Date.now(),kind:"prog",ath:ath});
   lsSet(IDEAS,all);ta.value="";lsDel(DRAFT);queuePush(1);toast(ath?"Saved to Programming, for "+ath:"Saved to Programming");draw();if(q)nativeClose()}
 function progHTML(){
