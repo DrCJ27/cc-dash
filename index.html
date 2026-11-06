@@ -489,7 +489,7 @@ function weekHTML(){
 // Working / Calls and texts / Other / Distracted, each opening to its real time blocks.
 function breakdownHTML(k,w){
   var det=(lsGet("cc-work",{})||{})[k]||null,work=w[1]||0,comms=w[2]||0,dist=w[3]||0;
-  var rows=[["work","At the computer",work],["calls","Calls",(det&&det.calls?det.calls.reduce(function(t,b){return t+b[2]},0):comms)],["texts","Texts with athletes",(det&&det.texts?det.texts.reduce(function(t,b){return t+b[2]},0):0)],["personal","Other texts",w[5]||0],["dist","Distracted",dist]];
+  var rows=[["work","At the computer",work],["calls","Calls",(det&&det.calls?det.calls.reduce(function(t,b){return t+b[2]},0):comms)],["texts","Texts with athletes",(det&&det.texts?det.texts.reduce(function(t,b){return t+b[2]},0):0)],["personal","Texts, not athletes",w[5]||0],["dist","Distracted",dist]].concat(det&&det.unsorted&&det.unsorted.length?[["unsorted","Not sorted",det.unsorted.reduce(function(t,b){return t+b[2]},0)]]:[]);
   var h='<div class="brk">';
   rows.forEach(function(r){
     var blocks=det&&det[r[0]]||[],can=blocks.length>0,op=can&&OPEN["w:"+k+r[0]];
@@ -633,18 +633,21 @@ function discHTML(){
   if(DISCMSG)h+='<div class="dmsg">'+e(DISCMSG)+'</div>';
   h+='<div class="iact dbtns"><button class="ib go" id="dheld">Held the line</button><button class="ib" id="dslip">'+(SLIPASK?'Tap again to log it':'Slip')+'</button>'+(d.slip?'<button class="ib" id="dunslip">That was a mistake</button>':'')+'</div></div>';
   return h}
-function nightScore(k,n){            // his tap, checked against the tracker: called it, then worked on = the later time counts
-  if(!n){            // no tap: the night closes itself at 04:00 from his last work minute
-    var sd0=seasonData(),au=sd0&&sd0.auto&&sd0.auto[k];
-    if(!au||k>=dk(eveDate()))return {l:"",p:0};
-    var dt0=new Date(au*1000),h0=dt0.getHours(),l0=(h0>=4&&h0<22)?"RX+":(h0===22?"RX":(h0===23?"SCALED":"LATE"));
-    return {l:l0,auto:true,late:dt0.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}),p:{"RX+":30,"RX":20,"SCALED":10,"LATE":5}[l0]||0}}
-  var sd=seasonData(),ms=[],l=n.l,late="";
-  (sd&&sd.late&&sd.late[k]||[]).forEach(function(r){for(var i=0;i<r[1];i++){var t=r[0]+i*62;if(t*1000>(n.ts||0))ms.push(t)}});
-  if(ms.length>15){var dt=new Date(ms[ms.length-1]*1000),hr=dt.getHours();
-    l=(hr>=4&&hr<22)?"RX+":(hr===22?"RX":(hr===23?"SCALED":"LATE"));
-    late=dt.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}
-  return {l:l,late:late,p:{"RX+":30,"RX":20,"SCALED":10,"LATE":5}[l]||0}}
+function lvlAt(ms){var h=new Date(ms).getHours();return (h>=4&&h<22)?"RX+":(h===22?"RX":(h===23?"SCALED":"LATE"))}
+function nightScore(k,n){
+  // One rule, tap or no tap: the night ends at the point with 15 work minutes or fewer after it.
+  // A tap only says "I'm done" and holds if the tracker agrees. No tap closes itself once the day is over,
+  // and only pays when the Mac was awake late enough to know; a closed laptop proves nothing.
+  var sd=seasonData(),ms=[],today=dk(eveDate());
+  (sd&&sd.late&&sd.late[k]||[]).forEach(function(r){for(var i=0;i<r[1];i++){var t=r[0]+i*62;if(!n||t*1000>(n.ts||0))ms.push(t)}});
+  var over=ms.length>15?ms[ms.length-16]:null,pts={"RX+":30,"RX":20,"SCALED":10,"LATE":5};
+  var clock=function(t){return new Date(t*1000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})};
+  if(n){if(!over)return {l:n.l,late:"",p:pts[n.l]||0};
+    var l1=lvlAt(over*1000);return {l:l1,late:clock(over),p:pts[l1]||0}}
+  if(k>=today)return {l:"",p:0};
+  var aw=sd&&sd.awake&&sd.awake[k],lateEnough=aw&&new Date(aw*1000).getHours()!==undefined&&(aw*1000>=new Date(parseDay(k).getTime()+23*3600000).getTime());
+  if(!lateEnough)return {l:"",unconfirmed:true,p:0};
+  var l2=over?lvlAt(over*1000):"RX+";return {l:l2,auto:true,late:over?clock(over):"",p:pts[l2]||0}}
 function sessionOn(k,L){var g=L.garmin[k],acts=(g&&g.acts)||[],m=0;
   acts.forEach(function(a){m+=a.min||0});
   var rows=dayEntries(L,k);rows.forEach(function(r){if(!acts.length)m+=r.e.minutes||0});
