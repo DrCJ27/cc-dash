@@ -1095,6 +1095,9 @@ function captureHTML(titled){var kb=window.matchMedia&&window.matchMedia("(hover
 var TOASTT=null;function toast(m){var t=$("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";document.body.appendChild(t)}t.textContent=m;t.hidden=false;if(TOASTT)clearTimeout(TOASTT);TOASTT=setTimeout(function(){t.hidden=true},2400)}
 /* ---------- pages ---------- */
 function shell(body){var dr=snapDrafts();var pv=PREVIEW?'<div class="pv">Preview: nothing saves</div>':'';$("app").innerHTML=(lane==="health"?'':pv)+tabsHTML()+(lane==="health"?'':body);restoreDrafts(dr);FLASHID=null;showHealth(lane==="health")}
+window.hqLogFor=function(k,v){var L=logState(),id="log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  L.entries[id]={date:k,text:v,minutes:null,ts:Date.now()};LGEN++;lsSet(LOG,L);lsSet("cc-log-dirty",1);toast("Logged. It goes to CircleFit.");logSync();return true};
+window.hqLogWords=function(k){return dayEntries(logState(),k).map(function(r){return r.e.text}).join(" / ")};
 function unlogged(){      // watch sessions with nothing written. Stays until he writes something or says nothing to add
   var L=logState(),today=dk(eveDate()),out=[],c=LOG_START,cut=logCut();if(c<cut)c=cut;
   while(c<=today){var g=L.garmin[c],acts=((g&&g.acts)||[]).filter(function(a){return (a.min||0)>=15});
