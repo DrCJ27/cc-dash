@@ -33,7 +33,7 @@ h1,h2,.num,.tabs button,.ttl{font-family:"Big Shoulders Display",Impact,"Arial N
 .t-work .lab,.t-work .num{color:var(--work)}.t-dist .lab,.t-dist .num{color:var(--dist)}.t-prog .lab,.t-prog .num{color:var(--prog)}.t-lights .lab,.t-lights .num{color:var(--lights)}
 .t-lights.done .lab,.t-lights.done .num{color:var(--win)}
 .grid3,.gc{display:flex;flex-direction:column;gap:18px}.sect{display:flex;flex-direction:column;gap:9px}
-.ttl{font-size:34px;line-height:1;font-weight:800;text-transform:uppercase;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.s-remind{border:2px solid var(--work);margin:0 0 12px}.s-remind .rwhat{font-size:16px;margin:6px 0}.ttl{font-size:34px;line-height:1;font-weight:800;text-transform:uppercase;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .ttl em{font:500 13px Archivo,sans-serif;font-style:normal;text-transform:none;color:var(--mute)}
 .s-time .ttl{color:var(--work)}.s-next .ttl{color:var(--next)}.s-lights .ttl{color:var(--lights)}.s-disc .ttl{color:var(--disc)}.s-chal .ttl{color:var(--prog)}.s-idea .ttl{color:var(--idea)}.s-mine .ttl{color:var(--next)}.s-train .ttl,.dtitle.train{color:var(--train)}.s-goal .ttl{color:var(--prog)}.s-more .ttl{color:var(--ink2);font-size:26px}
 .hours{display:grid;grid-template-columns:repeat(20,1fr);gap:2px;height:96px;align-items:end}
@@ -164,7 +164,7 @@ var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
 var OPEN={}, PEND=0, HQ_ALL=0, FOLDS={};   // open folds/cards, redraw deferred while typing, "+N more" expanded
 function typing(){var a=document.activeElement;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
 function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
-function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT};["inew","ifind","iedit","dlog","dmin"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
+function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT};["inew","ifind","iedit","dlog","dmin","rlog"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
 function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie"||id==="_le")return;var x=document.getElementById(id);if(!x)return;if(id==="dlog"){if(o[id]&&o._le===LEDIT)x.value=o[id];return}if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
 var HQ=lsGet0(HQCFG,null);           // {url,key} -- rides inside the encrypted todo feed
 var SYNC={state:HQ?"":"waiting for feed",ok:null};
@@ -501,7 +501,7 @@ function hm(m){m=m||0;return m>=60?Math.floor(m/60)+'h '+(m%60)+'m':m+'m'}
 function workDay(k){return GLANCE&&GLANCE.counts&&GLANCE.counts.work_days&&GLANCE.counts.work_days[k]}
 function parseDay(k){var p=k.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
 function dayEntries(L,k){return Object.keys(L.entries).map(function(id){var x=L.entries[id];return {id:id,e:x}})
-  .filter(function(r){return r.e.date===k&&!r.e.deleted}).sort(function(a,b){return (a.e.ts||0)-(b.e.ts||0)})}
+  .filter(function(r){return r.e.date===k&&!r.e.deleted&&!r.e.skip}).sort(function(a,b){return (a.e.ts||0)-(b.e.ts||0)})}
 // Working / Calls and texts / Other / Distracted, each opening to its real time blocks.
 function breakdownHTML(k,w){
   var det=(lsGet("cc-work",{})||{})[k]||null,work=w[1]||0,comms=w[2]||0,dist=w[3]||0;
@@ -815,7 +815,7 @@ function ideaCard(i){
 }
 function ideasGridHTML(){
   var all=lsGet(IDEAS,[]),f=IFILTER.trim().toLowerCase(),live=[],arch=[];
-  all.forEach(function(i){if(!i||!i.k||!i.t)return;
+  all.forEach(function(i){if(!i||!i.k||!i.t||i.kind==="prog")return;
     if(f){if(f.charAt(0)==="#"){if(ideaTags(i.t).indexOf(f.slice(1))<0)return}else if(i.t.toLowerCase().indexOf(f)<0)return}
     (i.arch?arch:live).push(i)});
   live.sort(function(a,b){return (b.star?1:0)-(a.star?1:0)||entTs(b)-entTs(a)});
@@ -911,7 +911,7 @@ window.hqGlance=function(){
       end=(hh>=4&&hh<22)?22:(hh===22?23:(hh===23?24:0)),ta=$("inew"),t=lsGet(NIGHTS,{})[dk(eveDate())];
   return JSON.stringify({unlocked:unlocked,feed:!!FEED,needs:top?top.length:-1,lvl:lvlNow(),
     mins_left:end?(end-hh)*60-d.getMinutes():0,called:t?t.l:"",draft:!!((ta&&ta.value.trim())||($("dlog")&&$("dlog").value.trim())),
-    dirty:lsGet("cc-dirty",0)?1:0,busy:!!busy,err:err?String(err).slice(0,80):""});
+    dirty:lsGet("cc-dirty",0)?1:0,log:unlogged().length,busy:!!busy,err:err?String(err).slice(0,80):""});
 };
 
 /* ---------- Preview guard: same origin, same unlock, nothing saves. Flip PREVIEW off to ship. ---------- */
@@ -1091,10 +1091,29 @@ function challengeHTML(){
   return h}
 /* ---------- capture ---------- */
 function captureHTML(titled){var kb=window.matchMedia&&window.matchMedia("(hover:hover)").matches;
-  return '<section class="sect s-idea g-idea">'+(titled?'<h2 class="ttl">Ideas and to-dos</h2>':'')+'<textarea id="inew" class="inew" placeholder="Idea or to-do"></textarea><div class="iact"><button class="ib ton" id="iadd">Idea</button><button class="ib ton" id="itodo">To-do</button>'+(kb?'<span class="sm">Enter = idea &middot; &#8984; Enter = to-do</span>':'')+'</div></section>'}
+  return '<section class="sect s-idea g-idea">'+(titled?'<h2 class="ttl">Ideas and to-dos</h2>':'')+'<textarea id="inew" class="inew" placeholder="Idea, to-do or programming note"></textarea><div class="iact"><button class="ib ton" id="iadd">Idea</button><button class="ib ton" id="itodo">To-do</button><button class="ib ton" id="iprog">Programming</button>'+(kb?'<span class="sm">Enter = idea &middot; &#8984; Enter = to-do</span>':'')+'</div></section>'}
 var TOASTT=null;function toast(m){var t=$("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";document.body.appendChild(t)}t.textContent=m;t.hidden=false;if(TOASTT)clearTimeout(TOASTT);TOASTT=setTimeout(function(){t.hidden=true},2400)}
 /* ---------- pages ---------- */
 function shell(body){var dr=snapDrafts();var pv=PREVIEW?'<div class="pv">Preview: nothing saves</div>':'';$("app").innerHTML=(lane==="health"?'':pv)+tabsHTML()+(lane==="health"?'':body);restoreDrafts(dr);FLASHID=null;showHealth(lane==="health")}
+function unlogged(){      // watch sessions with nothing written. Stays until he writes something or says nothing to add
+  var L=logState(),today=dk(eveDate()),out=[],c=LOG_START,cut=logCut();if(c<cut)c=cut;
+  while(c<=today){var g=L.garmin[c],acts=((g&&g.acts)||[]).filter(function(a){return (a.min||0)>=15});
+    var any=Object.keys(L.entries).some(function(id){var x=L.entries[id];return x.date===c&&!x.deleted});
+    if(acts.length&&!any)out.push({k:c,acts:acts});
+    c=addDays(c,1)}
+  return out}
+function reminderHTML(){
+  var u=unlogged();if(!u.length)return '';
+  var r=u[0],d=parseDay(r.k),when=r.k===dk(eveDate())?'Today':DAYS[d.getDay()]+' '+MON[d.getMonth()]+' '+d.getDate();
+  var what=r.acts.map(function(a){return (a.run?'Run':'Cardio')+' '+a.min+' min at '+(a.start||'')}).join(', ');
+  return '<section class="sect s-remind"><h2 class="ttl">Log your workout'+(u.length>1?' <em>'+u.length+' to go</em>':'')+'</h2><div class="rwhat"><b>'+e(when)+'</b> '+e(what)+'</div>'
+   +'<textarea id="rlog" class="inew dlog" placeholder="What did you do?"></textarea><div class="iact"><button class="ib go" id="rsave">Log it</button><button class="ib" id="rskip">Nothing to add</button></div></section>'}
+function logReminder(skip){
+  var u=unlogged();if(!u.length)return;
+  var ta=$("rlog"),v=ta?ta.value.trim():"";if(!skip&&!v)return;
+  var L=logState(),id="log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  L.entries[id]=skip?{date:u[0].k,text:"",skip:1,ts:Date.now()}:{date:u[0].k,text:v,minutes:null,ts:Date.now()};
+  LGEN++;lsSet(LOG,L);lsSet("cc-log-dirty",1);if(ta)ta.value="";toast(skip?"Done":"Logged. It goes to CircleFit.");draw();logSync()}
 function drawToday(panel){
   var ed=eveDate(),k=dk(ed),n=lsGet(NIGHTS,{})[k],H=headline(),won=!!n,ae=document.activeElement,foc=(ae&&ae.id==="inew")||(QUICK&&(!ae||ae===document.body));
   var h='<div class="page'+(won?' won':'')+'">';
@@ -1103,6 +1122,7 @@ function drawToday(panel){
   h+=mottoHTML();
   h+='<div class="head '+H.c+'"><div class="kick">'+DAYS[ed.getDay()]+' '+MON[ed.getMonth()]+' '+ed.getDate()+'</div><h1>'+e(H.t)+'</h1>'+(H.sub?'<div class="sub">'+e(H.sub)+'</div>':'')+'</div>';
   h+=nightsStrip()+sinceLine();
+  h+=reminderHTML();
   h+='<div class="grid3">'+nextHTML(won)+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+(panel?'':captureHTML())+moreListsHTML()+'</div>';
   h+=sysHTML()+'</div>';
   shell(h);wireCallIt();wireCapture(foc)}
@@ -1135,8 +1155,22 @@ function mineListHTML(){var mine=lsGet(MINE+"todo",[]).filter(function(m){return
     +(MEDIT===m.k?'<textarea class="iedit" id="medit">'+e(m.who)+'</textarea><div class="iact"><button class="ib" data-m="save">Save</button><button class="ib" data-m="cancel">Cancel</button></div>'
      :'<div class="itext">'+e(m.who)+'</div><div class="iact"><button class="ib" data-m="done">Done</button><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="toidea">Move to Ideas</button></div>')+'</li>'});
   return h+'</ul></section>'}
+function addProg(){
+  var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
+  var q=QUICK,sd=seasonData(),names=(sd&&sd.names)||[],ath="";
+  names.forEach(function(n){if(!ath&&new RegExp("\\b"+n+"\\b").test(v))ath=n});
+  var all=lsGet(IDEAS,[]);all.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:v,ts:Date.now(),kind:"prog",ath:ath});
+  lsSet(IDEAS,all);ta.value="";lsDel(DRAFT);queuePush(1);toast(ath?"Saved to Programming, for "+ath:"Saved to Programming");draw();if(q)nativeClose()}
+function progHTML(){
+  var by={},all=lsGet(IDEAS,[]).filter(function(i){return i&&i.kind==="prog"&&!i.arch});
+  all.forEach(function(i){var a=i.ath||"General";(by[a]=by[a]||[]).push(i)});
+  var h='<section class="sect s-prognote"><h2 class="ttl">Programming <em>'+all.length+'</em></h2>';
+  if(!all.length)h+='<div class="sm">Notes here feed that athlete\'s next Thursday draft. Nothing goes to them unless you approve it.</div>';
+  Object.keys(by).sort(function(a,b){return a==="General"?1:(b==="General"?-1:a.localeCompare(b))}).forEach(function(a){
+    h+='<div class="dtitle dsub">'+e(a)+'</div><ul class="igrid">';by[a].forEach(function(i){h+=ideaCard(i)});h+='</ul>'});
+  return h+'</section>'}
 function drawIdeas(){
-  var h='<div class="page">'+captureHTML(true)+'<div class="twin"><section class="sect s-idea"><h2 class="ttl">Ideas</h2><input id="ifind" class="ifind" placeholder="Find" value="'+e(IFILTER)+'"><div id="igrid">'+ideasGridHTML()+'</div></section>'+mineListHTML()+'</div>'+sysHTML()+'</div>';
+  var h='<div class="page">'+captureHTML(true)+'<div class="twin"><section class="sect s-idea"><h2 class="ttl">Ideas</h2><input id="ifind" class="ifind" placeholder="Find" value="'+e(IFILTER)+'"><div id="igrid">'+ideasGridHTML()+'</div></section>'+progHTML()+mineListHTML()+'</div>'+sysHTML()+'</div>';
   shell(h);wireCapture(document.activeElement&&document.activeElement.id==="inew");
   var fi=$("ifind");if(fi){fi.oninput=function(){IFILTER=fi.value;$("igrid").innerHTML=ideasGridHTML()}}
   var ed=$("iedit");if(ed){ed.focus();ed.selectionStart=ed.value.length;ed.onkeydown=function(ev){if(ev.key==="Enter"&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();saveIdeaEdit()}if(ev.key==="Escape"){IEDIT=null;redrawIdeas()}}}
@@ -1256,6 +1290,9 @@ document.addEventListener("click",function(ev){
   if(t.id==="refresh"){load();return}
   if(t.id==="iadd"){if(lane==="panel"||lane==="hq")panelSave();else addIdea();return}
   if(t.id==="itodo"){addTodo();return}
+  if(t.id==="iprog"){addProg();return}
+  if(t.id==="rsave"){logReminder(false);return}
+  if(t.id==="rskip"){logReminder(true);return}
   var tb=t.closest&&t.closest("[data-tag]");
   if(tb){var nf=tb.dataset.tag?"#"+tb.dataset.tag:"";IFILTER=(nf&&nf===IFILTER)?"":nf;var fi=$("ifind");if(fi)fi.value=IFILTER;redrawIdeas();return}
   var il=t.closest&&t.closest("li.idea");
