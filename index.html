@@ -157,7 +157,7 @@ li.hero{padding:14px;background:var(--next);color:#090B10;gap:10px}
 var PREVIEW=false,MEM={};
 var LANES=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"],["todo","Full board"]];
 var TABS=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"]];
-var lane=(location.hash||"#hq").slice(1);var HDAY0=null;if(/^health-/.test(lane)){HDAY0=lane.slice(7);lane="health"} if(!LANES.some(function(l){return l[0]===lane})&&lane!=="panel")lane="hq";
+var lane=(location.hash||"#hq").slice(1);var HDAY0=null,LISTOPEN=false;if(lane==="list"){lane="hq";LISTOPEN=true}if(/^health-/.test(lane)){HDAY0=lane.slice(7);lane="health"} if(!LANES.some(function(l){return l[0]===lane})&&lane!=="panel")lane="hq";
 function setFav(){}
 var KEYSTORE="cc-pass", FLAGS="cc-flags-", MINE="cc-mine-", IDEAS="cc-ideas", NIGHTS="cc-nights", HQCFG="cc-hq";
 var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
@@ -708,12 +708,20 @@ function bossRow(wk,label){
   return h}
 function fallbackCopy(ta,btn){if(!ta)return;ta.focus();ta.select();var ok=false;try{ok=document.execCommand("copy")}catch(x){}
   btn.textContent=ok?"Copied":"Selected. Press copy.";SHEETMSG=ok?"Copied":""}
+var WEEKFLOW={1:["CircleFit accessory","SKEL"],2:["GPP athletes","WPA","Notifications to zero"],3:["Notifications cleared completely"],4:["10 to 15 CrossFit athletes"],5:["Finish the CrossFit athletes"],6:[],0:["Last athletes, done by 10"]};
+function listDay(){var d=eveDate();d.setDate(d.getDate()+1);return d}
+function listDone(){return !!((ex().listdone||{})[dk(eveDate())])}
+function listCardOn(){var hr=new Date().getHours(),wd=listDay().getDay();return LISTOPEN||((hr>=21||hr<4)&&wd!==0&&wd!==6&&!listDone())}
 function draftNight(){
-  var sd=seasonData(),ok=(sd&&sd.names)||[],names=[];
+  var sd=seasonData(),ok=(sd&&sd.names)||[],names=[],L=(sd&&sd.list)||{},td=listDay(),lines=[];
+  if(L.calls){(L.calls[dk(td)]||[]).forEach(function(c){lines.push(c)})}else lines.push("Calendar did not load. Check your calls");
+  (WEEKFLOW[td.getDay()]||[]).forEach(function(w){lines.push(w==="SKEL"?(L.skeletons?"Skeleton development for "+L.skeletons+" athletes":"Skeleton development"):w)});
   (FEED&&FEED.sections||[]).filter(function(s){return s.id==="cj-today"}).forEach(function(s){(s.items||[]).forEach(function(i){
     if(isDone(i))return;var m=String(i.who||"").match(/^([A-Z][a-z]+)/);if(m&&ok.indexOf(m[1])>=0&&names.indexOf(m[1])<0)names.push(m[1])})});
-  return 'Tomorrow:\n'+(names.length?'- Athletes: '+names.slice(0,8).join(', ')+'\n':'')+'- '}
+  return DAYS[td.getDay()]+':\n'+lines.map(function(x){return '- '+x+'\n'}).join('')+(names.length?'- Athletes: '+names.slice(0,8).join(', ')+'\n':'')+'- '}
 function sheetKey(){return "cc-sheet-"+dk(eveDate())}
+function listCardHTML(){if(!listCardOn())return '';
+  return '<section class="sect s-remind" id="tlist"><h2 class="ttl">Tomorrow\'s list</h2>'+sheetHTML()+'</section>'}
 function sheetHTML(){
   return '<div class="day"><div class="dtitle dsub">Tomorrow\'s list for the team</div><textarea id="sdraft" class="inew dlog">'+e(lsGet(sheetKey(),"")||draftNight())+'</textarea>'
    +'<div class="iact"><button class="ib go" id="scopy">'+(SHEETMSG||'Copy')+'</button><a class="ib" href="https://wodprep.slack.com/archives/C089C0WLFGQ" target="_blank" rel="noopener noreferrer">Open #1-daily-to-do</a><button class="ib" id="sdone">Done</button></div></div>'}
@@ -1063,7 +1071,7 @@ function moreListsHTML(){
 function lightsHTML(){
   var ed=eveDate(),k=dk(ed),nights=lsGet(NIGHTS,{}),t=nights[k],lvl=lvlNow(),hr=new Date().getHours();
   var h='<section class="sect s-lights g-lights" id="lights"><h2 class="ttl">Lights Out</h2>';
-  if(t){var s=nightScore(k,t);h+='<div class="stats">Called at <b>'+e(t.t)+'</b>'+(s.late?'. You worked till <b>'+e(s.late)+'</b>, so that time counts.':'.')+'</div>'+(CALLSHEET?sheetHTML():'<div class="iact"><button class="ib" id="sopen">Tomorrow\'s list</button></div>')}
+  if(t){var s=nightScore(k,t);h+='<div class="stats">Called at <b>'+e(t.t)+'</b>'+(s.late?'. You worked till <b>'+e(s.late)+'</b>, so that time counts.':'.')+'</div>'+(listCardOn()?'':(CALLSHEET?sheetHTML():'<div class="iact"><button class="ib" id="sopen">Tomorrow\'s list</button></div>'))}
   else{h+='<div class="ladder"><div class="rung'+(lvl==="RX+"?' live':' gone')+'"><b>Rx+</b>10pm</div><div class="rung'+(lvl==="RX"?' live':(lvl==="RX+"?'':' gone'))+'"><b>Rx</b>11pm</div><div class="rung'+(lvl==="SCALED"?' live':(lvl==="LATE"?' gone':''))+'"><b>Scaled</b>12am</div></div>';
     if(hr>=18||hr<4)h+='<button class="cta" id="callit">Call it. Done for the night.</button>';
     h+='<div class="sm">If you forget, 4am closes it from your last work.</div>'}
@@ -1126,7 +1134,7 @@ function drawToday(panel){
   h+=mottoHTML();
   h+='<div class="head '+H.c+'"><div class="kick">'+DAYS[ed.getDay()]+' '+MON[ed.getMonth()]+' '+ed.getDate()+'</div><h1>'+e(H.t)+'</h1>'+(H.sub?'<div class="sub">'+e(H.sub)+'</div>':'')+'</div>';
   h+=nightsStrip()+sinceLine();
-  h+=reminderHTML();
+  h+=listCardHTML()+reminderHTML();
   h+='<div class="grid3">'+nextHTML(won)+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+(panel?'':captureHTML())+moreListsHTML()+'</div>';
   h+=sysHTML()+'</div>';
   shell(h);wireCallIt();wireCapture(foc)}
@@ -1276,7 +1284,7 @@ document.addEventListener("click",function(ev){
     if(op0){ea.pauses[op0]={from:ea.pauses[op0].from,to:dk(eveDate()),ts:Date.now()}}else{ea.pauses[Date.now()]={from:dk(eveDate()),ts:Date.now()}}exSave(ea);draw();return}
   if(mt&&mt.id==="scopy"){var sd0=$("sdraft"),tx=sd0?sd0.value:"";var okc=function(){SHEETMSG="Copied";mt.textContent="Copied"};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(okc).catch(function(){fallbackCopy(sd0,mt)});else fallbackCopy(sd0,mt);return}
-  if(mt&&mt.id==="sdone"){CALLSHEET=false;draw();return}
+  if(mt&&mt.id==="sdone"){var eld=ex();eld.listdone=eld.listdone||{};eld.listdone[dk(eveDate())]=Date.now();exSave(eld);CALLSHEET=false;LISTOPEN=false;draw();return}
   if(mt&&mt.id==="sopen"){CALLSHEET=true;SHEETMSG="";draw();return}
   if(mt&&mt.id==="sundo"){var eu2=ex(),sp2=eu2.spent||{},live=Object.keys(sp2).filter(function(i){return !sp2[i].gone}).sort().pop();if(live){sp2[live]={kind:sp2[live].kind,gone:1,ts:Date.now()};exSave(eu2);draw()}return}
   var brk=mt&&mt.closest?mt.closest("[data-brk]"):null;
@@ -1328,6 +1336,7 @@ document.addEventListener("click",function(ev){
 });
 window.addEventListener("hashchange",function(){
   var l=location.hash.slice(1);
+  if(l==="list"){LISTOPEN=true;l="hq";if(lane==="hq"){draw();window.scrollTo(0,0)}}
   if(/^health-/.test(l)){HEALTHDAY=l.slice(7);l="health"}
   if((LANES.some(function(x){return x[0]===l})||l==="panel")&&l!==lane){lane=l;if(FEED||l==="health")draw();else load()}});
 function seasonPull(){if(!HQ||!localStorage.getItem(KEYSTORE))return;
