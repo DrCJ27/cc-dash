@@ -716,45 +716,56 @@ function listDay(){var d=listEve();d.setDate(d.getDate()+1);return d}
 function listPosted(day){var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[];return P.some(function(x){return x.day===day})}
 function listDone(){return !!((ex().listdone||{})[dk(listEve())])||listPosted(dk(listDay()))}
 /* Anything missed carries over. CJ, Nov 6 2026: "anything missed carries over definitely."
-   A line on a list stays open until he taps it done, deletes it from the draft, or strikes it in Slack.
-   A workday with no list at all carries that day's week flow. Calls never carry: a call's day is over. */
-var LISTSEED={day:"2026-11-06",lines:["CircleFit: write WP 30 for next week","CircleFit: write Tuesday WPA","CircleFit: review and publish Endurance and Flex","Finish the CrossFit athletes"]},LISTFLOWFROM="2026-11-09";
-function lkey(t){return String(t||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
-function lIsCall(t){return /^\d{1,2}(:\d\d)?\s*(am|pm)\b/i.test(t)}
+   A line he put on a list stays open until he taps it done, deletes it from the draft he was shown, or strikes it in Slack.
+   A workday with no list carries that day's week flow through the end of that week, and no further: next week the flow restarts.
+   Calls never carry. When in doubt a line stays open: losing one silently is the worst failure here. */
+var LISTSEED={day:"2026-11-06",lines:["CircleFit: write WP 30","CircleFit: write Tuesday WPA","CircleFit: review and publish Endurance and Flex","Finish the CrossFit athletes"]},LISTFLOWFROM="2026-11-09",LISTSHOWN={key:"",keys:{}},LISTUNDO=null;
+function lkey(t){var k=String(t||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+  if(/^skeleton development/.test(k))return "skeleton development";if(/^notifications/.test(k))return "notifications";if(/crossfit athletes$/.test(k))return "crossfit athletes";return k}
+function lIsCall(t){return /^\d{1,2}(:\d\d)?\s*(am|pm)\b/i.test(t)&&/\b(call|interview|meeting|consult\w*|zoom|sync)\b/i.test(t)}
+function lSkip(t){return !lkey(t)||lIsCall(t)||/^calendar did not load/i.test(t)}
+function lHead(t){return /^\W*(sun|mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?)(day)?\W*$/i.test(t)}
+function lText(x){return String(x||"").replace(/^[-•\s]+/,"").trim()}
 function flowLines(d,L){return (WEEKFLOW[d.getDay()]||[]).map(function(w){return w==="SKEL"?(L.skeletons?"Skeleton development for "+L.skeletons+" athletes":"Skeleton development"):w})}
-function listOpen(day){   // open lines from days before this one, oldest first
-  var sd=seasonData(),L=(sd&&sd.list)||{},E=ex(),store=E.listopen||{},done=E.listdone||{},map={},seen={};
-  var put=function(t,from){var k=lkey(t);if(!k||lIsCall(t)||/^calendar did not load/i.test(t)||from>=day)return;if(!map[k]||from>map[k].from)map[k]={k:k,t:map[k]?map[k].t:t,from:from}};
-  LISTSEED.lines.forEach(function(t){put(t,LISTSEED.day)});
-  (L.posted||[]).forEach(function(p){seen[p.day]=1;p.lines.forEach(function(x){put(x[0],p.day)})});
-  Object.keys(store).forEach(function(k){if(store[k].t&&store[k].from)put(store[k].t,store[k].from)});
+function listOpen(day){   // lines open from before this day, oldest first
+  var sd=seasonData(),L=(sd&&sd.list)||{},E=ex(),store=E.listopen||{},clear=E.listclear||{},done=E.listdone||{},map={},seen={};
+  var put=function(t,from,at){var k=lkey(t);if(lSkip(t)||from>=day)return;if(!map[k]||at>=map[k].at)map[k]={k:k,t:t,from:from,at:at}};
+  var ms=function(k){return parseDay(k).getTime()};
+  LISTSEED.lines.forEach(function(t){put(t,LISTSEED.day,ms(LISTSEED.day))});
+  (L.posted||[]).forEach(function(p){seen[p.day]=1;p.lines.forEach(function(x){if(!x[1])put(x[0],p.day,ms(p.day))})});
+  Object.keys(store).forEach(function(k){var i=store[k];if(i&&i.t&&i.from){seen[i.from]=1;put(i.t,i.from,i.at||ms(i.from))}});
   Object.keys(done).forEach(function(ev){var n=parseDay(ev);n.setDate(n.getDate()+1);seen[dk(n)]=1});
-  for(var d=parseDay(LISTFLOWFROM);dk(d)<day;d.setDate(d.getDate()+1)){var w=d.getDay(),ky=dk(d);if(w!==0&&w!==6&&!seen[ky])flowLines(d,L).forEach(function(t){put(t,ky)})}
-  (L.posted||[]).forEach(function(p){p.lines.forEach(function(x){if(x[1]){var m=map[lkey(x[0])];if(m&&m.from<=p.day)delete map[lkey(x[0])]}})});
-  return Object.keys(map).map(function(k){return map[k]}).filter(function(m){var c=store[m.k]&&store[m.k].x;return !c||m.from>c}).sort(function(a,b){return a.from<b.from?-1:1})}
-function listClear(k){var E=ex();E.listopen=E.listopen||{};E.listopen[k]=Object.assign({},E.listopen[k],{x:dk(eveDate()),ts:Date.now()});exSave(E);
-  var s=lsGet(sheetKey(),"");if(s)lsSet(sheetKey(),s.split("\n").filter(function(x){return lkey(x.replace(/^[-•\s]+/,""))!==k}).join("\n"))}
-function listSave(){   // Done: what is on the list becomes open for that day, and carried lines he deleted are closed
-  var ta=$("sdraft"),E=ex(),day=dk(listDay()),today=dk(eveDate()),has={};E.listopen=E.listopen||{};
-  (ta?ta.value:"").split("\n").slice(1).forEach(function(x){var t=x.replace(/^[-•\s]+/,"").trim(),k=lkey(t);if(!k||lIsCall(t)||/^calendar did not load/i.test(t))return;has[k]=1;E.listopen[k]={t:t,from:day,x:(E.listopen[k]||{}).x||null,ts:Date.now()}});
-  listOpen(day).forEach(function(m){if(!has[m.k]){E.listopen[m.k]=Object.assign({t:m.t,from:m.from},E.listopen[m.k],{x:today,ts:Date.now()})}});
-  E.listdone=E.listdone||{};E.listdone[dk(listEve())]=Date.now();exSave(E)}
+  var mon=parseDay(day);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));var d=dk(mon)>LISTFLOWFROM?mon:parseDay(LISTFLOWFROM);
+  for(;dk(d)<day;d.setDate(d.getDate()+1)){var ky=dk(d),w=d.getDay();if(w!==0&&w!==6&&!seen[ky])flowLines(d,L).forEach(function(t){put(t,ky,ms(ky))})}
+  (L.posted||[]).forEach(function(p){p.lines.forEach(function(x){if(!x[1])return;var m=map[lkey(x[0])];if(m&&ms(p.day)>=ms(m.from)-6*864e5)delete map[lkey(x[0])]})});
+  return Object.keys(map).map(function(k){return map[k]}).filter(function(m){var c=clear[m.k];return !(c&&c.x)||m.at>c.x}).sort(function(a,b){return a.from<b.from?-1:1})}
+function listClear(k){var E=ex(),sd=seasonData(),L=(sd&&sd.list)||{},m=listOpen(dk(listDay())).filter(function(x){return x.k===k})[0];E.listclear=E.listclear||{};
+  LISTUNDO={k:k,t:m?m.t:k,prev:E.listclear[k]||null};E.listclear[k]={x:Date.now(),ts:Date.now()};exSave(E);
+  var inFlow=flowLines(listDay(),L).some(function(w){return lkey(w)===k});
+  var s=lsGet(sheetKey(),"");if(s&&!inFlow)lsSet(sheetKey(),s.split("\n").filter(function(x){return lkey(lText(x))!==k}).join("\n"))}
+function listUndo(){if(!LISTUNDO)return;var E=ex(),u=LISTUNDO;E.listclear=E.listclear||{};E.listclear[u.k]=u.prev?Object.assign({},u.prev,{ts:Date.now()}):{x:0,ts:Date.now()};exSave(E);
+  var s=lsGet(sheetKey(),"");if(s&&s.split("\n").every(function(x){return lkey(lText(x))!==u.k}))lsSet(sheetKey(),s.replace(/\n*$/,"")+"\n- "+u.t+"\n");LISTUNDO=null}
+function listSeen(txt){var key=sheetKey();if(LISTSHOWN.key!==key)LISTSHOWN={key:key,keys:{}};String(txt||"").split("\n").forEach(function(x){var t=lText(x);if(!lHead(t)&&!lSkip(t))LISTSHOWN.keys[lkey(t)]=t})}
+function listSave(mark){   // what is on the list stays open for that day. Only a line he was shown and then removed closes
+  var ta=$("sdraft");if(!ta)return;var E=ex(),day=dk(listDay()),now=Date.now(),has={};E.listopen=E.listopen||{};E.listclear=E.listclear||{};
+  ta.value.split("\n").forEach(function(x){var t=lText(x);if(lHead(t)||lSkip(t))return;var k=lkey(t);has[k]=1;var old=E.listopen[k];E.listopen[k]={t:t,from:day,at:old&&old.from===day?old.at:now,ts:now}});
+  listSeen(ta.value);Object.keys(LISTSHOWN.keys).forEach(function(k){if(!has[k])E.listclear[k]={x:now,ts:now}});
+  if(mark){E.listdone=E.listdone||{};E.listdone[dk(listEve())]=now}exSave(E)}
 function listCalls(L){return !!(L.calls&&L.at&&Date.now()/1000-L.at<21600)}   // 6 hours: older means the Mac was asleep
 function listCardOn(){var hr=new Date().getHours(),wd=listDay().getDay();return LISTOPEN||((hr>=21||hr<4)&&wd!==0&&wd!==6&&!listDone())}
 function draftNight(){
   var sd=seasonData(),L=(sd&&sd.list)||{},td=listDay(),lines=[];
   if(listCalls(L))(L.calls[dk(td)]||[]).forEach(function(c){lines.push(c)});else lines.push("Calendar did not load. Check your calls");
-  var flow=flowLines(td,L),inFlow={};flow.forEach(function(w){inFlow[lkey(w)]=1});
+  var flow=flowLines(td,L),inFlow={};flow.forEach(function(w){inFlow[lkey(w)]=1;lines.push(w)});
   listOpen(dk(td)).forEach(function(m){if(!inFlow[m.k])lines.push(m.t)});
-  flow.forEach(function(w){lines.push(w)});
   return DAYS[td.getDay()]+':\n'+lines.map(function(x){return '- '+x+'\n'}).join('')}
 function sheetKey(){return "cc-sheet-"+dk(listEve())}
 function listCardHTML(){if(!listCardOn())return '';
   return '<section class="sect s-remind" id="tlist"><h2 class="ttl">'+(listMorning()?'Today':'Tomorrow')+'\'s list</h2>'+sheetHTML(1)+'</section>'}
 function sheetHTML(noTitle){
-  var saved=lsGet(sheetKey(),""),txt=saved||draftNight(),sd=seasonData(),L=(sd&&sd.list)||{},fresh=listCalls(L)?(L.calls[dk(listDay())]||[]):[],gone=saved?fresh.filter(function(c){return saved.indexOf(c)<0}):[];
-  return '<div class="day">'+(noTitle?'':'<div class="dtitle dsub">Tomorrow\'s list for the team</div>')+(function(){var op=listOpen(dk(listDay()));return op.length?'<div class="sm">Still open. Tap what got done.</div><div class="iact">'+op.map(function(m){return '<button class="ib" data-lclr="'+e(m.k)+'">'+e(m.t)+'</button>'}).join('')+'</div>':''})()+(gone.length?'<div class="sm">Not in your draft yet: '+e(gone.join(', '))+'</div>':'')+'<textarea id="sdraft" class="inew dlog" style="height:'+(txt.split("\n").length*1.5+1.5)+'em">'+e(txt)+'</textarea>'
-   +'<div class="iact"><button class="ib go" id="scopy">'+(SHEETMSG||'Copy')+'</button><a class="ib" href="https://wodprep.slack.com/archives/C089C0WLFGQ" target="_blank" rel="noopener noreferrer">Open #1-daily-to-do</a><button class="ib" id="sredo">Start over</button><button class="ib" id="sdone">Done</button></div></div>'}
+  var saved=lsGet(sheetKey(),""),txt=saved||draftNight(),sd=seasonData(),L=(sd&&sd.list)||{},fresh=listCalls(L)?(L.calls[dk(listDay())]||[]):[],op=listOpen(dk(listDay())),gone=saved?fresh.concat(op.map(function(m){return m.t})).filter(function(c){return !saved.split("\n").some(function(x){return lkey(lText(x))===lkey(c)})}):[];listSeen(txt);
+  return '<div class="day">'+(noTitle?'':'<div class="dtitle dsub">Tomorrow\'s list for the team</div>')+(op.length||LISTUNDO?'<div class="sm">Still open. Tap what got finished.</div><div class="iact">'+op.map(function(m){return '<button class="ib" data-lclr="'+e(m.k)+'">'+e(m.t)+'</button>'}).join('')+(LISTUNDO?'<button class="ib" id="lundo">Undo: '+e(LISTUNDO.t)+'</button>':'')+'</div>':'')+(gone.length?'<div class="sm">Not in your draft yet: '+e(gone.join(', '))+'</div>':'')+'<textarea id="sdraft" class="inew dlog" style="height:'+(txt.split("\n").length*1.5+1.5)+'em">'+e(txt)+'</textarea>'
+   +'<div class="iact"><button class="ib go" id="scopy">'+(SHEETMSG||'Copy')+'</button><a class="ib" href="https://wodprep.slack.com/archives/C089C0WLFGQ" target="_blank" rel="noopener noreferrer">Open #1-daily-to-do</a><button class="ib" id="sredo">Start over</button><button class="ib" id="sdone">List done</button></div></div>'}
 function topNow(){   // Needs you now after dedupe + ranking; null until the feed is in
   if(!FEED)return null;
     var secs=FEED.sections||[],cj=secs.filter(function(s){return /^cj-/.test(s.id||"")}),
@@ -1312,11 +1323,12 @@ document.addEventListener("click",function(ev){
   if(SPENDASK){SPENDASK=null}
   if(mt&&mt.id==="spause"){var ea=ex(),op0=isPaused();ea.pauses=ea.pauses||{};
     if(op0){ea.pauses[op0]={from:ea.pauses[op0].from,to:dk(eveDate()),ts:Date.now()}}else{ea.pauses[Date.now()]={from:dk(eveDate()),ts:Date.now()}}exSave(ea);draw();return}
-  if(mt&&mt.id==="scopy"){var sd0=$("sdraft"),tx=sd0?sd0.value:"";var okc=function(){SHEETMSG="Copied";mt.textContent="Copied"};
+  if(mt&&mt.id==="scopy"){var sd0=$("sdraft"),tx=sd0?sd0.value:"";listSave(false);var okc=function(){SHEETMSG="Copied";mt.textContent="Copied"};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(okc).catch(function(){fallbackCopy(sd0,mt)});else fallbackCopy(sd0,mt);return}
   if(mt&&mt.dataset&&mt.dataset.lclr){listClear(mt.dataset.lclr);draw();return}
-  if(mt&&mt.id==="sdone"){listSave();CALLSHEET=false;LISTOPEN=false;if(location.hash==="#list"){try{history.replaceState(null,"","#hq")}catch(x){}}draw();return}
-  if(mt&&mt.id==="sredo"){lsSet(sheetKey(),"");SHEETMSG="";draw();return}
+  if(mt&&mt.id==="lundo"){listUndo();draw();return}
+  if(mt&&mt.id==="sdone"){listSave(true);LISTUNDO=null;CALLSHEET=false;LISTOPEN=false;if(location.hash==="#list"){try{history.replaceState(null,"","#hq")}catch(x){}}draw();return}
+  if(mt&&mt.id==="sredo"){lsSet(sheetKey(),"");SHEETMSG="";LISTUNDO=null;draw();return}
   if(mt&&mt.id==="sopen"){CALLSHEET=true;SHEETMSG="";draw();return}
   if(mt&&mt.id==="sundo"){var eu2=ex(),sp2=eu2.spent||{},live=Object.keys(sp2).filter(function(i){return !sp2[i].gone}).sort().pop();if(live){sp2[live]={kind:sp2[live].kind,gone:1,ts:Date.now()};exSave(eu2);draw()}return}
   var brk=mt&&mt.closest?mt.closest("[data-brk]"):null;
