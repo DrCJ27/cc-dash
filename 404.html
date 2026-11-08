@@ -3,14 +3,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>HQ</title>
+<meta name="apple-mobile-web-app-title" content="HQ">
+<link rel="apple-touch-icon" href="/cc-dash/apple-touch-icon.png">
+<link rel="icon" href="/cc-dash/favicon.png">
+<noscript><meta http-equiv="refresh" content="0;url=/cc-dash/#hq"></noscript>
 <script>
 // Any wrong address under /cc-dash/ forwards into the app instead of a dead page.
 // /cc-dash/hq, /cc-dash/todo.html, /cc-dash/ideas/ -> /cc-dash/#hq etc. Unknown -> #hq.
+// Lanes mirror index.html; health-YYYY-MM-DD is the health day deep link.
 (function(){
   var lanes={hq:1,todo:1,ideas:1,week:1,health:1,panel:1,list:1};
   var p=location.pathname.replace(/^\/cc-dash\/?/i,"").replace(/\/+$/,"");
   var seg=(p.split("/")[0]||"").toLowerCase().replace(/\.html?$/,"");
-  var h=location.hash&&location.hash.length>1?location.hash:(lanes[seg]?"#"+seg:"#hq");
+  var h=location.hash&&location.hash.length>1?location.hash:(lanes[seg]||/^health-\d{4}-\d{2}-\d{2}$/.test(seg)?"#"+seg:"#hq");
   location.replace("/cc-dash/"+h);
 })();
 </script>
