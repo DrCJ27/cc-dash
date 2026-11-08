@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HQ</title>
+<script>
+// Any wrong address under /cc-dash/ forwards into the app instead of a dead page.
+// /cc-dash/hq, /cc-dash/todo.html, /cc-dash/ideas/ -> /cc-dash/#hq etc. Unknown -> #hq.
+(function(){
+  var lanes={hq:1,todo:1,ideas:1,week:1,health:1,panel:1,list:1};
+  var p=location.pathname.replace(/^\/cc-dash\/?/i,"").replace(/\/+$/,"");
+  var seg=(p.split("/")[0]||"").toLowerCase().replace(/\.html?$/,"");
+  var h=location.hash&&location.hash.length>1?location.hash:(lanes[seg]?"#"+seg:"#hq");
+  location.replace("/cc-dash/"+h);
+})();
+</script>
+<style>body{margin:0;background:#0A1D2A;color:#fff;font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}a{color:#FFC847}</style>
+</head><body><p>Opening HQ. <a href="/cc-dash/#hq">Tap here if it does not open.</a></p></body></html>
