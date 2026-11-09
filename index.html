@@ -1264,7 +1264,9 @@ var WORKRX=/\b(email|e-mail|reply|text|call|coachrx|circlefit|athlete|coach|camp
 function mkGuess(t){var sd=seasonData(),names=(sd&&sd.names)||[];if(WORKRX.test(t))return "work";for(var i=0;i<names.length;i++)if(new RegExp("\\b"+names[i]+"\\b","i").test(t))return "work";return "personal"}
 function mkItems(){var nd=new Date(),tag=new RegExp("\\b"+MON[nd.getMonth()]+" "+nd.getDate()+"\\b"),out=[];
   lsGet(MINE+"todo",[]).filter(function(m){return !m.done}).forEach(function(m){var t=String(m.who||"").replace(/\s+/g," ");out.push({t:t.length>90?t.slice(0,88)+"...":t,due:tag.test(t),side:mkGuess(t),mine:1})});
-  nextList().forEach(function(i,n){var l=(i.l||[])[0];out.push({t:heroTitle(i),side:"work",rank:n,act:l?l[2]:"",href:l?safe(l[1]):""})});
+  var seen={},sys=systemKeys(),psec={};(FEED&&FEED.sections||[]).forEach(function(s){if(/personal/i.test(s.id||""))(s.items||[]).forEach(function(i){psec[keyOf(i)]=1})});
+  function add(i){var k=keyOf(i);if(seen[k]||sys[k]||isDone(i))return;seen[k]=1;var l=(i.l||[])[0];out.push({t:heroTitle(i),side:psec[k]?"personal":"work",act:l?l[2]:"",href:l?safe(l[1]):""})}
+  nextList().forEach(add);(FEED&&FEED.sections||[]).forEach(function(s){if(s.id==="system")return;(s.items||[]).forEach(add)});
   var work=out.filter(function(x){return x.side==="work"}),pers=out.filter(function(x){return x.side==="personal"});
   var due=work.filter(function(x){return x.due}),sw=work.filter(function(x){return !x.mine}),mu=work.filter(function(x){return x.mine&&!x.due});
   work=due.concat(sw.slice(0,3),mu,sw.slice(3));   // dated mine compete for the top, undated mine sit under the top 3
