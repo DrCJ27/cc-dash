@@ -155,10 +155,18 @@ li.hero{padding:14px;background:var(--next);color:#090B10;gap:10px}
 .ttl{font-size:40px}.bignum b{font-size:84px}
 }
 @media (max-width:360px){.streak b{font-size:44px}}
+.mk{display:flex;flex-direction:column;gap:28px}.mkopt{background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:18px 16px}
+.mklab{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:900;font-size:30px;text-transform:uppercase;color:var(--next);line-height:1}.mklab small{display:block;font:500 14px/1.4 Archivo,sans-serif;color:var(--ink2);text-transform:none;margin-top:6px}
+.mkh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:6px;margin:18px 0 4px;font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;font-size:22px;text-transform:uppercase}.mkh em{font-style:normal;color:var(--mute);font-size:16px}
+.mkb{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:14px 0 2px}.mkb.now{color:var(--next)}
+.mkl{list-style:none;margin:0;padding:0}.mkl li{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--raise2);min-width:0}
+.mkc{flex:0 0 22px;height:22px;border:2px solid var(--ink2);border-radius:4px}.mkt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mkt.due{color:var(--next);font-weight:700}.mkt small{color:var(--mute);font-weight:500}
+.mka{flex:0 0 auto;font-size:13px;font-weight:700;padding:5px 10px;border:1px solid var(--line);border-radius:4px;color:var(--ink2);text-decoration:none}
+.mkmore{color:var(--mute);font-size:14px;padding:8px 0}.mkcols{display:grid;grid-template-columns:2fr 1fr;gap:24px}@media(max-width:720px){.mkcols{grid-template-columns:1fr}}
 </style></head><body><div id="app"></div>
 <script>
 var PREVIEW=false,MEM={};
-var LANES=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"],["todo","Full board"]];
+var LANES=[["mock","Preview"],["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"],["todo","Full board"]];
 var TABS=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"]];
 var lane=(location.hash||"#hq").slice(1);var HDAY0=null,LISTOPEN=false;if(lane==="list"){lane="hq";LISTOPEN=true}if(/^health-/.test(lane)){HDAY0=lane.slice(7);lane="health"} if(!LANES.some(function(l){return l[0]===lane})&&lane!=="panel")lane="hq";
 function setFav(){}
@@ -1251,6 +1259,30 @@ var HEALTHDAY=null,FLASHID=null;
 function drawHealth(){shell('')}
 function goLane(l){if(l==="health"||l===lane&&l!=="health"){}lane=l;try{history.replaceState(null,"","#"+l)}catch(x){location.hash="#"+l}if(FEED||l==="health")draw();else load();window.scrollTo(0,0)}
 
+/* ---------- #mock: three looks for Work + Personal, read-only (CJ, Nov 9: "i want to see it in the board") ---------- */
+var WORKRX=/\b(email|e-mail|reply|text|call|coachrx|circlefit|athlete|coach|camp|wodprep|podcast|program|skeleton|slack|board|invoice|client|onboard|sales|demo|video|loom|track|wpa|hyrox|crossfit|clinic|hire|hiring|app access|scholarship|zoom|meeting|rodecaster|pelican)\b/i;
+function mkGuess(t){var sd=seasonData(),names=(sd&&sd.names)||[];if(WORKRX.test(t))return "work";for(var i=0;i<names.length;i++)if(new RegExp("\\b"+names[i]+"\\b","i").test(t))return "work";return "personal"}
+function mkItems(){var nd=new Date(),tag=new RegExp("\\b"+MON[nd.getMonth()]+" "+nd.getDate()+"\\b"),out=[];
+  lsGet(MINE+"todo",[]).filter(function(m){return !m.done}).forEach(function(m){var t=String(m.who||"").replace(/\s+/g," ");out.push({t:t.length>90?t.slice(0,88)+"...":t,due:tag.test(t),side:mkGuess(t),mine:1})});
+  nextList().forEach(function(i,n){var l=(i.l||[])[0];out.push({t:heroTitle(i),side:"work",rank:n,act:l?l[2]:"",href:l?safe(l[1]):""})});
+  var work=out.filter(function(x){return x.side==="work"}),pers=out.filter(function(x){return x.side==="personal"});
+  var due=work.filter(function(x){return x.due}),sw=work.filter(function(x){return !x.mine}),mu=work.filter(function(x){return x.mine&&!x.due});
+  work=due.concat(sw.slice(0,3),mu,sw.slice(3));   // dated mine compete for the top, undated mine sit under the top 3
+  return {work:work,pers:pers}}
+function mkRow(x,act){var a=act&&x.act?(x.href?'<a class="mka" href="'+e(x.href)+'" target="_blank" rel="noopener noreferrer">'+e(x.act.split(/ [-:(]/)[0].slice(0,18))+'</a>':'<span class="mka">'+e(x.act.slice(0,18))+'</span>'):'';
+  return '<li><span class="mkc"></span><span class="mkt'+(x.due?' due':'')+'">'+e(x.t)+(x.due?' <small>due today</small>':'')+'</span>'+a+'</li>'}
+function mkList(arr,n,act){var h='<ul class="mkl">'+arr.slice(0,n).map(function(x){return mkRow(x,act)}).join('')+'</ul>';if(arr.length>n)h+='<div class="mkmore">'+(arr.length-n)+' more</div>';return h}
+function drawMock(){
+  var L=mkItems(),W=L.work,P=L.pers;
+  var h='<div class="page"><div class="head"><h1>Pick a look</h1><div class="sub">Your real items, split Work and Personal by my guess. Nothing here saves or clicks through to Done. Tell me A, B, C or a mix.</div></div><div class="mk">';
+  h+='<div class="mkopt"><div class="mklab">A. Checklist<small>Notepad list. Due today in gold on top. Tap a line for detail and its button.</small></div>'
+    +'<div class="mkh">Work<em>'+W.length+' left</em></div>'+mkList(W,7,false)+'<div class="mkh">Personal<em>'+P.length+' left</em></div>'+mkList(P,5,false)+'</div>';
+  var now=W.slice(0,2),td=W.slice(2,6),lt=W.slice(6);
+  h+='<div class="mkopt"><div class="mklab">B. Now / Today / Later<small>Three buckets by urgency, one button per line, no big card.</small></div>'
+    +'<div class="mkh">Work<em>'+W.length+' left</em></div><div class="mkb now">Now</div>'+mkList(now,2,true)+'<div class="mkb">Today</div>'+mkList(td,4,true)+'<div class="mkb">Later</div><div class="mkmore">'+lt.length+' items, tap to show</div>'
+    +'<div class="mkh">Personal<em>'+P.length+'</em></div><div class="mkmore">Tap to show</div></div>';
+  h+='<div class="mkopt"><div class="mklab">C. Side by side<small>Work and Personal as two columns on the desk, stacked on the phone.</small></div><div class="mkcols"><div><div class="mkh">Work<em>'+W.length+'</em></div>'+mkList(W,8,false)+'</div><div><div class="mkh">Personal<em>'+P.length+'</em></div>'+mkList(P,8,false)+'</div></div></div>';
+  shell(h+'</div></div>')}
 function draw(){
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){
@@ -1267,6 +1299,7 @@ function draw(){
     $("pw").focus();
     return;
   }
+  if(lane==="mock"){drawMock();return}
   if(lane==="hq"){drawHQ();return}
   if(lane==="ideas"){drawIdeas();return}
   if(lane==="week"){drawWeek();return}
