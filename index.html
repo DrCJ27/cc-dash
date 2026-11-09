@@ -1270,7 +1270,7 @@ function mkItems(){var nd=new Date(),tag=new RegExp("\\b"+MON[nd.getMonth()]+" "
   var seen={},sys=systemKeys(),psec={};(FEED&&FEED.sections||[]).forEach(function(s){if(/personal/i.test(s.id||""))(s.items||[]).forEach(function(i){psec[keyOf(i)]=1})});
   function add(i){var k=keyOf(i);if(seen[k]||sys[k]||isDone(i))return;seen[k]=1;var l=(i.l||[])[0];out.push({t:heroTitle(i),side:psec[k]?"personal":"work",act:l?l[2]:"",href:l?safe(l[1]):""})}
   nextList().forEach(add);(FEED&&FEED.sections||[]).forEach(function(s){if(s.id==="system")return;(s.items||[]).forEach(add)});
-  var work=out.filter(function(x){return x.side==="work"}),pers=out.filter(function(x){return x.side==="personal"});
+  var work=out.filter(function(x){return x.side==="work"}),pers=out.filter(function(x){return x.side==="personal"&&!x.mine}).concat(out.filter(function(x){return x.side==="personal"&&x.mine}));
   var due=work.filter(function(x){return x.due}),sw=work.filter(function(x){return !x.mine}),mu=work.filter(function(x){return x.mine&&!x.due});
   work=due.concat(sw.slice(0,3),mu,sw.slice(3));   // dated mine compete for the top, undated mine sit under the top 3
   return {work:work,pers:pers}}
@@ -1288,9 +1288,14 @@ function drawMock(){
     +'<div class="mkh">Personal<em>'+P.length+'</em></div><div class="mkmore">Tap to show</div></div>';
   h+='<div class="mkopt"><div class="mklab">C. Side by side<small>Work and Personal as two columns on the desk, stacked on the phone.</small></div><div class="mkcols"><div><div class="mkh">Work<em>'+W.length+'</em></div>'+mkList(W,8,false)+'</div><div><div class="mkh">Personal<em>'+P.length+'</em></div>'+mkList(P,8,false)+'</div></div></div>';
   shell(h+'</div></div>')}
-var MOCKV="a",MOCKP=false;
-function mkBar(){return '<div class="mkbar"><span>Preview, nothing saves</span>'+[["a","A. Checklist"],["b","B. Now / Today / Later"],["c","C. Side by side"]].map(function(o){return '<button class="mkv'+(MOCKV===o[0]?' on':'')+'" data-mv="'+o[0]+'">'+o[1]+'</button>'}).join('')+'</div>'}
+var MOCKV="d",MOCKP=false;
+function mkBar(){return '<div class="mkbar"><span>Preview, nothing saves</span>'+[["d","A+B, both ranked"],["a","A. Checklist"],["b","B. Now / Today / Later"],["c","C. Side by side"]].map(function(o){return '<button class="mkv'+(MOCKV===o[0]?' on':'')+'" data-mv="'+o[0]+'">'+o[1]+'</button>'}).join('')+'</div>'}
+function mkBuckets(arr,nNow,nToday,act,fold){var due=arr.filter(function(x){return x.due}),rest=arr.filter(function(x){return !x.due});
+  var now=due.concat(rest.slice(0,Math.max(0,nNow-due.length))),r2=rest.slice(Math.max(0,nNow-due.length)),td=r2.slice(0,nToday),lt=r2.slice(nToday);
+  var h='';if(now.length)h+='<div class="mkb now">Now</div>'+mkList(now,9,act);if(td.length)h+='<div class="mkb">Today</div>'+mkList(td,nToday,act);
+  if(lt.length)h+='<div class="mkb">Later</div>'+(fold?'<div class="mkmore">'+lt.length+' more, tap to show</div>':mkList(lt,0,act));return h}
 function mkSecs(v){var L=mkItems(),W=L.work,P=L.pers;
+  if(v==="d")return '<section class="sect s-next g-next mksec"><h2 class="ttl">To do</h2><div class="mkh">Work<em>'+W.length+' left</em></div>'+mkBuckets(W,2,4,true,true)+'<div class="mkh">Personal<em>'+P.length+' left</em></div>'+mkBuckets(P,1,2,true,true)+'</section>';
   if(v==="a")return '<section class="sect s-next g-next mksec"><h2 class="ttl">To do</h2><div class="mkh">Work<em>'+W.length+' left</em></div>'+mkList(W,7,false)+'<div class="mkh">Personal<em>'+P.length+' left</em></div>'+mkList(P,5,false)+'</section>';
   if(v==="b")return '<section class="sect s-next g-next mksec"><h2 class="ttl">To do</h2><div class="mkh">Work<em>'+W.length+' left</em></div><div class="mkb now">Now</div>'+mkList(W.slice(0,2),2,true)+'<div class="mkb">Today</div>'+mkList(W.slice(2,6),4,true)+'<div class="mkb">Later</div><div class="mkmore">'+Math.max(0,W.length-6)+' items, tap to show</div>'
     +'<div class="mkh">Personal<em>'+P.length+'</em></div>'+(MOCKP?mkList(P,8,true):'<button class="mkmore mkp" data-mp="1">Tap to show</button>')+'</section>';
