@@ -132,6 +132,7 @@ li.hero{padding:14px;background:var(--next);color:#090B10;gap:10px}
 .foldrow{display:flex;flex-wrap:wrap;gap:6px}.fchip{background:var(--raise);border:1px solid var(--line);color:var(--ink);min-height:44px;padding:0 12px;font-size:14px;font-weight:600}.fchip b{color:var(--ink2);font-weight:500;margin-left:3px}.fchip.on{border-color:var(--ink)}
 .page.won .head h1{color:var(--win)}
 .grid3{display:flex;flex-direction:column;gap:16px}.g-next{order:1}.g-band{order:2}.g-time{order:3}.g-lights{order:4}.g-disc{order:5}.g-chal{order:6}.g-idea{order:7}.g-more{order:8}
+.g-mine{order:-1}
 .page.won .g-lights{order:0}.page.won .g-next{order:7}
 .page>.g-idea{order:-1}
 .twin{display:grid;grid-template-columns:1fr;gap:18px}
@@ -144,10 +145,12 @@ li.hero{padding:14px;background:var(--next);color:#090B10;gap:10px}
 .motto{font-size:44px}
 .grid3{display:grid;gap:20px;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-areas:
  "band band band band band band band band band band band band"
+ "mine mine mine mine mine mine mine mine next next next next"
  "time time time time time time time time next next next next"
  "lights lights disc disc chal chal chal chal next next next next"
  "idea idea idea more more more more more next next next next";align-items:start}
 .g-band{grid-area:band}.g-time{grid-area:time}.g-next{grid-area:next}.g-lights{grid-area:lights}.g-disc{grid-area:disc}.g-chal{grid-area:chal}.g-idea{grid-area:idea}.g-more{grid-area:more}
+.g-mine{grid-area:mine}
 .squares{max-width:560px}.sq{aspect-ratio:auto;height:30px}.strip{gap:22px}.spk{display:block}.tile{padding:10px 14px 12px}.tile .num{font-size:60px}.hours{height:170px}.wv{height:64px}
 .ttl{font-size:40px}.bignum b{font-size:84px}
 }
@@ -164,8 +167,8 @@ var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
 var OPEN={}, PEND=0, HQ_ALL=0, FOLDS={};   // open folds/cards, redraw deferred while typing, "+N more" expanded
 function typing(){var a=document.activeElement;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
 function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
-function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT};["inew","ifind","iedit","dlog","dmin","rlog"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
-function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie"||id==="_le")return;var x=document.getElementById(id);if(!x)return;if(id==="dlog"){if(o[id]&&o._le===LEDIT)x.value=o[id];return}if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
+function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT,_me:MEDIT};["inew","ifind","iedit","medit","dlog","dmin","rlog"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
+function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie"||id==="_le"||id==="_me")return;if(id==="medit"){if(o._me===MEDIT)x.value=o[id];return}var x=document.getElementById(id);if(!x)return;if(id==="dlog"){if(o[id]&&o._le===LEDIT)x.value=o[id];return}if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
 var HQ=lsGet0(HQCFG,null);           // {url,key} -- rides inside the encrypted todo feed
 var SYNC={state:HQ?"":"waiting for feed",ok:null};
 function $(id){return document.getElementById(id)}
@@ -1177,15 +1180,15 @@ function logReminder(skip){
   L.entries[id]=skip?{date:u[0].k,text:"",skip:1,ts:Date.now()}:{date:u[0].k,text:v,minutes:null,ts:Date.now()};
   LGEN++;lsSet(LOG,L);lsSet("cc-log-dirty",1);if(ta)ta.value="";toast(skip?"Done":"Logged. It goes to CircleFit.");draw();logSync()}
 function drawToday(panel){
-  var ed=eveDate(),k=dk(ed),n=lsGet(NIGHTS,{})[k],H=headline(),won=!!n,ae=document.activeElement,foc=(ae&&ae.id==="inew")||(QUICK&&(!ae||ae===document.body));
+  var ed=eveDate(),k=dk(ed),n=lsGet(NIGHTS,{})[k],H=headline(),won=!!n,ae=document.activeElement,foc=(ae&&ae.id==="inew")||(QUICK&&!MEDIT&&(!ae||ae===document.body));
   var h='<div class="page'+(won?' won':'')+'">';
   if(busy&&!FEED)h+='<div class="note">Loading</div>';if(err)h+='<div class="err">'+e(err)+'</div>';
   if(panel)h+=captureHTML();
   h+=mottoHTML();
   h+='<div class="head '+H.c+'"><div class="kick">'+DAYS[ed.getDay()]+' '+MON[ed.getMonth()]+' '+ed.getDate()+'</div><h1>'+e(H.t)+'</h1>'+(H.sub?'<div class="sub">'+e(H.sub)+'</div>':'')+'</div>';
   h+=nightsStrip()+sinceLine();
-  h+=listCardHTML()+reminderHTML();
-  h+='<div class="grid3">'+nextHTML(won)+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+(panel?'':captureHTML())+moreListsHTML()+'</div>';
+  h+=listCardHTML()+reminderHTML();   // My list on Today too (CJ, Nov 9: "my to do list is very important and its missing things")
+  h+='<div class="grid3">'+mineListHTML(panel?"panel":"hq")+nextHTML(won)+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+(panel?'':captureHTML())+moreListsHTML()+'</div>';
   h+=sysHTML()+'</div>';
   shell(h);wireCallIt();wireCapture(foc)}
 function drawHQ(){drawToday(false)}
@@ -1211,12 +1214,15 @@ function drawWeek(){
   h+=weekRows(sel,today,L,mon)+goalHTML()+sysHTML()+'</div>';
   shell(h)}
 var MEDIT=null;
-function mineListHTML(){var mine=lsGet(MINE+"todo",[]).filter(function(m){return !m.done}),h='<section class="sect s-mine"><h2 class="ttl">My list<em>'+mine.length+'</em></h2>';
+function mineListHTML(on){var mine=lsGet(MINE+"todo",[]).filter(function(m){return !m.done}),h='<section class="sect s-mine'+(on?' g-mine':'')+'"><h2 class="ttl">My list<em>'+mine.length+'</em></h2>';
+  if(on){var nd=new Date(),tag=new RegExp("\\b"+MON[nd.getMonth()]+" "+nd.getDate()+"\\b"),today=mine.filter(function(m){return tag.test(m.who)}),rest=mine.filter(function(m){return !tag.test(m.who)});
+    mine=rest.concat(today);   // reversed below, so today's dated items land on top
+    if(on==="panel"&&mine.length>5){var more=mine.length-5;mine=mine.slice(-5)}}
   if(!mine.length)return h+'<div class="note">Nothing on it.</div></section>';
   h+='<ul>';mine.slice().reverse().forEach(function(m){h+='<li class="mline" data-mk="'+e(m.k)+'">'
     +(MEDIT===m.k?'<textarea class="iedit" id="medit">'+e(m.who)+'</textarea><div class="iact"><button class="ib" data-m="save">Save</button><button class="ib" data-m="cancel">Cancel</button></div>'
-     :'<div class="itext">'+e(m.who)+'</div><div class="iact"><button class="ib" data-m="done">Done</button><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="toidea">Move to Ideas</button></div>')+'</li>'});
-  return h+'</ul></section>'}
+     :(on&&m.who.length>140?(function(){var c=m.who.lastIndexOf(" ",130);if(c<60)c=130;var op=OPEN["m:"+m.k];return '<div class="itext clip'+(op?' open':'')+'" data-mk="'+e(m.k)+'">'+e(m.who.slice(0,c))+'<span class="rest">'+e(m.who.slice(c))+'</span> <button class="b-more" data-a="more">'+(op?'less':'more')+'</button></div>'})():'<div class="itext">'+e(m.who)+'</div>')+'<div class="iact"><button class="ib" data-m="done">Done</button><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="toidea">Move to Ideas</button></div>')+'</li>'});
+  return h+'</ul>'+(typeof more!=="undefined"&&more?'<button class="fchip" data-lane="hq">'+more+' more</button>':'')+'</section>'}
 function addProg(){
   var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
   var q=QUICK,sd=seasonData(),names=(sd&&sd.names)||[],ath="";
@@ -1306,7 +1312,7 @@ document.addEventListener("click",function(ev){
   if(mt.dataset&&mt.dataset.health){HEALTHDAY=mt.dataset.health;goLane("health");return}
   var ml=mt.closest&&mt.closest("li.mline");
   if(ml&&mt.dataset&&mt.dataset.m){var mka=mt.dataset.m,mkk=ml.getAttribute("data-mk"),mlist=lsGet(MINE+"todo",[]),mh=null;mlist.forEach(function(x){if(x.k===mkk)mh=x});if(!mh)return;
-    if(mka==="edit"){MEDIT=mkk;draw();return}
+    if(mka==="edit"){MEDIT=mkk;draw();var me=$("medit");if(me){me.focus();me.setSelectionRange(me.value.length,me.value.length)}return}
     if(mka==="cancel"){MEDIT=null;draw();return}
     if(mka==="save"){var mv=$("medit")&&$("medit").value.trim();MEDIT=null;if(mv&&mv!==mh.who){mh.who=mv;mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush()}draw();return}
     if(mka==="done"){mh.done=1;mh.ts=Date.now();var fr=mh.from;lsSet(MINE+"todo",mlist);if(fr){var i2=lsGet(IDEAS,[]);i2.forEach(function(i){if(i.k===fr&&i.todo){i.todo=0;i.ts=Date.now()}});lsSet(IDEAS,i2)}queuePush();draw();return}
@@ -1401,13 +1407,13 @@ function workPull(){if(!HQ||!localStorage.getItem(KEYSTORE))return;seasonPull();
   hqPost({action:"read_blob",kind:"work"}).then(function(r){if(!r.ok||!r.data||r.updated===lsGet("cc-work-at",""))return null;
     return decrypt(JSON.parse(r.data),localStorage.getItem(KEYSTORE)).then(function(w){lsSet("cc-work",w);lsSet("cc-work-at",r.updated);softDraw()})}).catch(function(){})}
 var LAST_TICK=0;
-function comeBack(){if(!FEED)return;workPull();if(Date.now()-FEED_AT>300000&&!typing()&&!busy){load();logSync();return}syncPull();logSync();loadGlance()}
+function comeBack(){if(!FEED)return;workPull();if(Date.now()-FEED_AT>300000&&!typing()&&!MEDIT&&!busy){load();logSync();return}syncPull();logSync();loadGlance()}
 document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")comeBack()});
 document.addEventListener("input",function(ev){var t=ev.target;if(t&&t.id==="sdraft")lsSet(sheetKey(),t.value);if(t&&t.id==="dlog"&&!LEDIT)lsSet(draftKey(DAYSEL||DAYSET||dk(eveDate())),t.value)});
 document.addEventListener("focusout",function(){setTimeout(function(){if(PEND&&!typing()){PEND=0;draw()}},400)});
 // keep the Lights Out countdown honest without stomping on typing
 setInterval(function(){
-  if((lane!=="hq"&&lane!=="panel")||!FEED)return;
+  if((lane!=="hq"&&lane!=="panel")||!FEED||MEDIT)return;
   var a=document.activeElement;
   if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))return;
   draw();
