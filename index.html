@@ -145,7 +145,6 @@ li.hero{padding:14px;background:var(--next);color:#090B10;gap:10px}
 .motto{font-size:44px}
 .grid3{display:grid;gap:20px;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-areas:
  "band band band band band band band band band band band band"
- "mine mine mine mine mine mine mine mine next next next next"
  "time time time time time time time time next next next next"
  "lights lights disc disc chal chal chal chal next next next next"
  "idea idea idea more more more more more next next next next";align-items:start}
@@ -155,21 +154,21 @@ li.hero{padding:14px;background:var(--next);color:#090B10;gap:10px}
 .ttl{font-size:40px}.bignum b{font-size:84px}
 }
 @media (max-width:360px){.streak b{font-size:44px}}
-.mk{display:flex;flex-direction:column;gap:28px}.mkopt{background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:18px 16px}
-.mklab{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:900;font-size:30px;text-transform:uppercase;color:var(--next);line-height:1}.mklab small{display:block;font:500 14px/1.4 Archivo,sans-serif;color:var(--ink2);text-transform:none;margin-top:6px}
-.mkh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:6px;margin:18px 0 4px;font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;font-size:22px;text-transform:uppercase}.mkh em{font-style:normal;color:var(--mute);font-size:16px}
-.mkb{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:14px 0 2px}.mkb.now{color:var(--next)}
-.mkl{list-style:none;margin:0;padding:0}.mkl li{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--raise2);min-width:0}
-.mkc{flex:0 0 22px;height:22px;border:2px solid var(--ink2);border-radius:4px}.mkt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mkt.due{color:var(--next);font-weight:700}.mkt small{color:var(--mute);font-weight:500}
-.mka{flex:0 0 auto;font-size:13px;font-weight:700;padding:5px 10px;border:1px solid var(--line);border-radius:4px;color:var(--ink2);text-decoration:none}
-.mkmore{color:var(--mute);font-size:14px;padding:8px 0}.mkcols{display:grid;grid-template-columns:2fr 1fr;gap:24px}@media(max-width:720px){.mkcols{grid-template-columns:1fr}}
-.mkbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 14px;padding:10px;border:2px dashed var(--next);border-radius:6px}.mkbar span{color:var(--next);font-weight:700;margin-right:6px}
-.mkv{background:var(--raise2);border:1px solid var(--line);border-radius:4px;padding:8px 12px;font-weight:700}.mkv.on{background:var(--next);color:#000;border-color:var(--next)}
-.mksec .mkh:first-of-type{margin-top:6px}.mkp{background:none;border:0;padding:8px 0;text-align:left}
+.s-todo .ttl{font-size:30px}.tsub{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:5px;margin:14px 0 2px;font:800 22px/1.1 "Big Shoulders Display",Impact,sans-serif;text-transform:uppercase}.tsub em{font:500 14px Archivo,sans-serif;color:var(--mute);text-transform:none}
+.tb{display:block;font:800 14px "Big Shoulders Display",Impact,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:12px 0 4px}.tb.now{color:var(--next)}.tb em{font-style:normal}button.tlater{background:none;border:0;padding:6px 0;min-height:36px;text-align:left}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+li.trow{background:var(--raise);padding:4px 6px;box-shadow:none;display:block}li.trow.due{box-shadow:inset 3px 0 0 var(--next)}
+.tline{display:flex;align-items:center;gap:8px;min-width:0}
+.tchk{flex:0 0 40px;height:40px;background:none;border:2px solid var(--ink2);border-radius:4px;color:var(--mute);font-size:16px;padding:0}
+.ttext{flex:1;min-width:0;background:none;border:0;text-align:left;padding:8px 2px;font-size:15.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li.trow.open .ttext{white-space:normal}li.trow.top .ttext{color:var(--next);font-weight:700}.ttext small{color:var(--next);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+.tgo{flex:0 0 auto;font-size:13px;font-weight:700;padding:0 10px;min-height:40px;display:inline-flex;align-items:center;border:1px solid var(--line);color:var(--ink2);text-decoration:none;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tdet{display:flex;flex-direction:column;gap:8px;padding:6px 4px 8px 48px}.tfull{font-size:14.5px;color:var(--ink2);white-space:pre-wrap}
+li.thero{display:flex;flex-direction:column}li.thero .ttext{color:#090B10;white-space:normal;padding:0;font-size:24px}li.thero .tdet{padding-left:0;color:#2B2600}li.thero .tfull,li.thero .sm{color:#2B2600}li.thero .ib{border-color:#090B10;color:#090B10;background:none}
 </style></head><body><div id="app"></div>
 <script>
 var PREVIEW=false,MEM={};
-var LANES=[["mock","Preview"],["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"],["todo","Full board"]];
+var LANES=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"],["todo","Full board"]];
 var TABS=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"]];
 var lane=(location.hash||"#hq").slice(1);var HDAY0=null,LISTOPEN=false;if(lane==="list"){lane="hq";LISTOPEN=true}if(/^health-/.test(lane)){HDAY0=lane.slice(7);lane="health"} if(!LANES.some(function(l){return l[0]===lane})&&lane!=="panel")lane="hq";
 function setFav(){}
@@ -445,7 +444,7 @@ async function load(){
     } else err=String(x.message||x);
   }
   busy=false; softDraw();
-  if(!err&&(lane==="hq"||lane==="mock"||flagLane()==="todo")){syncPull();loadGlance();logSync();workPull()}
+  if(!err&&(lane==="hq"||flagLane()==="todo")){syncPull();loadGlance();logSync();workPull()}
 }
 
 function clipWhat(txt,k){
@@ -950,9 +949,9 @@ function wireCapture(foc){
 function addTodo(){
   var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
   var q=QUICK,m=lsGet(MINE+"todo",[]);
-  m.push({k:"mine-"+Date.now(),who:v,ts:Date.now()});lsSet(MINE+"todo",m);
+  var sd=guessSide(v);m.push({k:"mine-"+Date.now(),who:v,ts:Date.now(),side:sd});lsSet(MINE+"todo",m);
   ta.value="";lsDel(DRAFT);
-  queuePush(1);toast("Saved to My list");draw();if(q)nativeClose();
+  queuePush(1);toast(sd==="work"?"Added to Work. Tap it to move it.":"Added to Personal. Tap it to move it.");draw();if(q)nativeClose();
 }
 function nativeClose(){try{window.webkit.messageHandlers.hq.postMessage("close")}catch(x){}}
 function openIdeas(){return lsGet(IDEAS,[]).filter(function(i){return i&&!i.arch}).length}
@@ -1198,8 +1197,8 @@ function drawToday(panel){
   h+=mottoHTML();
   h+='<div class="head '+H.c+'"><div class="kick">'+DAYS[ed.getDay()]+' '+MON[ed.getMonth()]+' '+ed.getDate()+'</div><h1>'+e(H.t)+'</h1>'+(H.sub?'<div class="sub">'+e(H.sub)+'</div>':'')+'</div>';
   h+=nightsStrip()+sinceLine();
-  h+=(lane==='mock'?mkBar():'')+listCardHTML()+reminderHTML();   // My list on Today too (CJ, Nov 9: "my to do list is very important and its missing things")
-  h+='<div class="grid3">'+(lane==='mock'?mkSecs(MOCKV):mineListHTML(panel?"panel":"hq")+nextHTML(won))+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+(panel?'':captureHTML())+(lane==='mock'?'':moreListsHTML())+'</div>';
+  h+=listCardHTML()+reminderHTML();   // My list on Today too (CJ, Nov 9: "my to do list is very important and its missing things")
+  h+='<div class="grid3">'+todoHTML(won)+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+(panel?'':captureHTML())+''+'</div>';
   h+=sysHTML()+'</div>';
   shell(h);wireCallIt();wireCapture(foc)}
 function drawHQ(){drawToday(false)}
@@ -1249,7 +1248,7 @@ function progHTML(){
     h+='<div class="dtitle dsub">'+e(a)+'</div><ul class="igrid">';by[a].forEach(function(i){h+=ideaCard(i)});h+='</ul>'});
   return h+'</section>'}
 function drawIdeas(){
-  var h='<div class="page">'+captureHTML(true)+'<div class="twin"><section class="sect s-idea"><h2 class="ttl">Ideas</h2><input id="ifind" class="ifind" placeholder="Find" value="'+e(IFILTER)+'"><div id="igrid">'+ideasGridHTML()+'</div></section>'+progHTML()+mineListHTML()+'</div>'+sysHTML()+'</div>';
+  var h='<div class="page">'+captureHTML(true)+'<div class="twin"><section class="sect s-idea"><h2 class="ttl">Ideas</h2><input id="ifind" class="ifind" placeholder="Find" value="'+e(IFILTER)+'"><div id="igrid">'+ideasGridHTML()+'</div></section>'+progHTML()+'</div>'+sysHTML()+'</div>';
   shell(h);wireCapture(document.activeElement&&document.activeElement.id==="inew");
   var fi=$("ifind");if(fi){fi.oninput=function(){IFILTER=fi.value;$("igrid").innerHTML=ideasGridHTML()}}
   var ed=$("iedit");if(ed){ed.focus();ed.selectionStart=ed.value.length;ed.onkeydown=function(ev){if(ev.key==="Enter"&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();saveIdeaEdit()}if(ev.key==="Escape"){IEDIT=null;redrawIdeas()}}}
@@ -1262,45 +1261,72 @@ var HEALTHDAY=null,FLASHID=null;
 function drawHealth(){shell('')}
 function goLane(l){if(l==="health"||l===lane&&l!=="health"){}lane=l;try{history.replaceState(null,"","#"+l)}catch(x){location.hash="#"+l}if(FEED||l==="health")draw();else load();window.scrollTo(0,0)}
 
-/* ---------- #mock: three looks for Work + Personal, read-only (CJ, Nov 9: "i want to see it in the board") ---------- */
-var WORKRX=/\b(email|e-mail|reply|text|call|coachrx|circlefit|athlete|coach|camp|wodprep|podcast|program|skeleton|slack|board|invoice|client|onboard|sales|demo|video|loom|track|wpa|hyrox|crossfit|clinic|hire|hiring|app access|scholarship|zoom|meeting|rodecaster|pelican)\b/i;
-function mkGuess(t){var sd=seasonData(),names=(sd&&sd.names)||[];if(WORKRX.test(t))return "work";for(var i=0;i<names.length;i++)if(new RegExp("\\b"+names[i]+"\\b","i").test(t))return "work";return "personal"}
-function mkItems(){var nd=new Date(),tag=new RegExp("\\b"+MON[nd.getMonth()]+" "+nd.getDate()+"\\b"),out=[];
-  lsGet(MINE+"todo",[]).filter(function(m){return !m.done}).forEach(function(m){var t=String(m.who||"").replace(/\s+/g," ");out.push({t:t.length>90?t.slice(0,88)+"...":t,due:tag.test(t),side:mkGuess(t),mine:1})});
-  var seen={},sys=systemKeys(),psec={};(FEED&&FEED.sections||[]).forEach(function(s){if(/personal/i.test(s.id||""))(s.items||[]).forEach(function(i){psec[keyOf(i)]=1})});
-  function add(i){var k=keyOf(i);if(seen[k]||sys[k]||isDone(i))return;seen[k]=1;var l=(i.l||[])[0];out.push({t:heroTitle(i),side:psec[k]?"personal":"work",act:l?l[2]:"",href:l?safe(l[1]):""})}
-  nextList().forEach(add);(FEED&&FEED.sections||[]).forEach(function(s){if(s.id==="system")return;(s.items||[]).forEach(add)});
-  var work=out.filter(function(x){return x.side==="work"}),pers=out.filter(function(x){return x.side==="personal"&&!x.mine}).concat(out.filter(function(x){return x.side==="personal"&&x.mine}));
-  var due=work.filter(function(x){return x.due}),sw=work.filter(function(x){return !x.mine}),mu=work.filter(function(x){return x.mine&&!x.due});
-  work=due.concat(sw.slice(0,3),mu,sw.slice(3));   // dated mine compete for the top, undated mine sit under the top 3
-  return {work:work,pers:pers}}
-function mkRow(x,act){var a=act&&x.act?(x.href?'<a class="mka" href="'+e(x.href)+'" target="_blank" rel="noopener noreferrer">'+e(x.act.split(/ [-:(]/)[0].slice(0,18))+'</a>':'<span class="mka">'+e(x.act.slice(0,18))+'</span>'):'';
-  return '<li><span class="mkc"></span><span class="mkt'+(x.due?' due':'')+'">'+e(x.t)+(x.due?' <small>due today</small>':'')+'</span>'+a+'</li>'}
-function mkList(arr,n,act){var h='<ul class="mkl">'+arr.slice(0,n).map(function(x){return mkRow(x,act)}).join('')+'</ul>';if(arr.length>n)h+='<div class="mkmore">'+(arr.length-n)+' more</div>';return h}
-function drawMock(){
-  var L=mkItems(),W=L.work,P=L.pers;
-  var h='<div class="page"><div class="head"><h1>Pick a look</h1><div class="sub">Your real items, split Work and Personal by my guess. Nothing here saves or clicks through to Done. Tell me A, B, C or a mix.</div></div><div class="mk">';
-  h+='<div class="mkopt"><div class="mklab">A. Checklist<small>Notepad list. Due today in gold on top. Tap a line for detail and its button.</small></div>'
-    +'<div class="mkh">Work<em>'+W.length+' left</em></div>'+mkList(W,7,false)+'<div class="mkh">Personal<em>'+P.length+' left</em></div>'+mkList(P,5,false)+'</div>';
-  var now=W.slice(0,2),td=W.slice(2,6),lt=W.slice(6);
-  h+='<div class="mkopt"><div class="mklab">B. Now / Today / Later<small>Three buckets by urgency, one button per line, no big card.</small></div>'
-    +'<div class="mkh">Work<em>'+W.length+' left</em></div><div class="mkb now">Now</div>'+mkList(now,2,true)+'<div class="mkb">Today</div>'+mkList(td,4,true)+'<div class="mkb">Later</div><div class="mkmore">'+lt.length+' items, tap to show</div>'
-    +'<div class="mkh">Personal<em>'+P.length+'</em></div><div class="mkmore">Tap to show</div></div>';
-  h+='<div class="mkopt"><div class="mklab">C. Side by side<small>Work and Personal as two columns on the desk, stacked on the phone.</small></div><div class="mkcols"><div><div class="mkh">Work<em>'+W.length+'</em></div>'+mkList(W,8,false)+'</div><div><div class="mkh">Personal<em>'+P.length+'</em></div>'+mkList(P,8,false)+'</div></div></div>';
-  shell(h+'</div></div>')}
-var MOCKV="d",MOCKP=false;
-function mkBar(){return '<div class="mkbar"><span>Preview, nothing saves</span>'+[["d","A+B, both ranked"],["a","A. Checklist"],["b","B. Now / Today / Later"],["c","C. Side by side"]].map(function(o){return '<button class="mkv'+(MOCKV===o[0]?' on':'')+'" data-mv="'+o[0]+'">'+o[1]+'</button>'}).join('')+'</div>'}
-function mkBuckets(arr,nNow,nToday,act,fold){var due=arr.filter(function(x){return x.due}),rest=arr.filter(function(x){return !x.due});
-  var now=due.concat(rest.slice(0,Math.max(0,nNow-due.length))),r2=rest.slice(Math.max(0,nNow-due.length)),td=r2.slice(0,nToday),lt=r2.slice(nToday);
-  var h='';if(now.length)h+='<div class="mkb now">Now</div>'+mkList(now,9,act);if(td.length)h+='<div class="mkb">Today</div>'+mkList(td,nToday,act);
-  if(lt.length)h+='<div class="mkb">Later</div>'+(fold?'<div class="mkmore">'+lt.length+' more, tap to show</div>':mkList(lt,0,act));return h}
-function mkSecs(v){var L=mkItems(),W=L.work,P=L.pers;
-  if(v==="d")return '<section class="sect s-next g-next mksec"><h2 class="ttl">To do</h2><div class="mkh">Work<em>'+W.length+' left</em></div>'+mkBuckets(W,2,4,true,true)+'<div class="mkh">Personal<em>'+P.length+' left</em></div>'+mkBuckets(P,1,2,true,true)+'</section>';
-  if(v==="a")return '<section class="sect s-next g-next mksec"><h2 class="ttl">To do</h2><div class="mkh">Work<em>'+W.length+' left</em></div>'+mkList(W,7,false)+'<div class="mkh">Personal<em>'+P.length+' left</em></div>'+mkList(P,5,false)+'</section>';
-  if(v==="b")return '<section class="sect s-next g-next mksec"><h2 class="ttl">To do</h2><div class="mkh">Work<em>'+W.length+' left</em></div><div class="mkb now">Now</div>'+mkList(W.slice(0,2),2,true)+'<div class="mkb">Today</div>'+mkList(W.slice(2,6),4,true)+'<div class="mkb">Later</div><div class="mkmore">'+Math.max(0,W.length-6)+' items, tap to show</div>'
-    +'<div class="mkh">Personal<em>'+P.length+'</em></div>'+(MOCKP?mkList(P,8,true):'<button class="mkmore mkp" data-mp="1">Tap to show</button>')+'</section>';
-  return '<section class="sect s-mine g-mine mksec"><h2 class="ttl">Work<em>'+W.length+'</em></h2>'+mkList(W,7,false)+'</section><section class="sect s-next g-next mksec"><h2 class="ttl">Personal<em>'+P.length+'</em></h2>'+mkList(P,7,false)+'</section>'}
-document.addEventListener("click",function(ev){var b=ev.target.closest&&ev.target.closest("[data-mv],[data-mp]");if(!b||lane!=="mock")return;if(b.dataset.mv)MOCKV=b.dataset.mv;if(b.dataset.mp)MOCKP=true;draw()});
+/* ---------- To do: two lists, Work and Personal, each ranked Now / Today / Later (CJ, Nov 9: "if its work, its work" / "prioritize each list") ---------- */
+// Same word list as scripts/mylist.py WORKRX. Change both together.
+var WORKRX=/\b(e-?mails?|repl(y|ies)|texts?|calls?|coachrx|circlefit|athletes?|coach(es|ing)?|camps?|wodprep|podcast|program(ming)?|skeletons?|slack|board|invoices?|clients?|onboard\w*|sales|demos?|videos?|looms?|tracks?|wpa|hyrox|crossfit|clinics?|hir(e|ing)|scholarships?|zoom|meetings?|profiles?|applicants?|applications?|rodecaster|pelican|intake|questionnaires?|athlete)\b/i;
+function guessSide(t){var sd=seasonData(),names=(sd&&sd.names)||[];if(WORKRX.test(t))return "work";for(var i=0;i<names.length;i++)if(names[i]&&new RegExp("\\b"+String(names[i]).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(t))return "work";return "personal"}
+function mineSide(m){return m.side==="work"||m.side==="personal"?m.side:guessSide(m.who||"")}
+function mineDue(m){ // a date in the first 20 chars ("Mon Nov 9: ...") that is today or earlier
+  var mt=String(m.who||"").slice(0,20).match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]{0,6}\.?\s+(\d{1,2})\s*[:,]/);if(!mt)return false;
+  var t=new Date(),mo=MON.indexOf(mt[1]),y=t.getFullYear();if(mo<0)return false;if(mo-t.getMonth()>6)y--;else if(t.getMonth()-mo>6)y++;
+  var d=new Date(y,mo,+mt[2]);t.setHours(23,59,59,999);return d<=t}
+var SAFERX=/logged in|login|security|unknown .*number|spoof|password|fraud/i;   // account-safety items lead their list
+var SYSWORK=/skeleton|intake|questionnaire/i;
+function todoLists(){
+  var W=[],P=[],seen={},sys=systemKeys(),psec={};
+  (FEED&&FEED.sections||[]).forEach(function(s){if(/personal/i.test(s.id||""))(s.items||[]).forEach(function(i){psec[keyOf(i)]=1})});
+  function sideOf(i){var k=keyOf(i),base=psec[k]?"personal":"work";return flagsFor(i).side?(base==="work"?"personal":"work"):base}
+  function sw(i){var k=keyOf(i);if(seen[k]||isDone(i))return null;if(sys[k]&&!SYSWORK.test(String(i.who||"")))return null;seen[k]=1;return {it:i,k:k,side:sideOf(i)}}
+  var mine=lsGet(MINE+"todo",[]).filter(function(m){return m&&!m.done}).map(function(m){return {m:m,k:m.k,side:mineSide(m),due:mineDue(m)}});
+  var soon=callSoon(),pin=(ex().pin||{}).k,head=[],sweep=[],lv=liveGaps();
+  if(soon){var x=sw(soon);if(x)head.push(x)}
+  if(lv){if(lv.item&&!isDone(lv.item))head.push({it:lv.item,k:keyOf(lv.item),side:"work"});(FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){if(GAPRX.test(String(i.who||"")))seen[keyOf(i)]=1})})}
+  mine.forEach(function(x){if(x.k===pin){x.pinned=1;head.push(x)}});
+  nextList().forEach(function(i){var x=sw(i);if(x){if(x.k===pin){x.pinned=1;head.push(x)}else sweep.push(x)}});
+  (FEED&&FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){var x=sw(i);if(x)sweep.push(x)})});
+  sweep=sweep.filter(function(x){if(pin&&x.k===pin){x.pinned=1;head.push(x);return false}return true});
+  function build(side,nTop,nToday){
+    var h=head.filter(function(x){return x.side===side}),due=mine.filter(function(x){return x.side===side&&x.due&&!x.pinned}),sv=sweep.filter(function(x){return x.side===side}).sort(function(p,q){return (SAFERX.test(tText(q))?1:0)-(SAFERX.test(tText(p))?1:0)}),und=mine.filter(function(x){return x.side===side&&!x.due&&!x.pinned});
+    var now=h.concat(due,sv.slice(0,nTop)),rest=sv.slice(nTop,nTop+1).concat(und.slice(0,2),sv.slice(nTop+1),und.slice(2));   // at most 2 undated own items above the sweep's 4th   // undated own items sit just under the sweep's top 3
+    return {now:now,today:rest.slice(0,nToday),later:rest.slice(nToday),n:now.length+rest.length}}
+  return {work:build("work",2,4),pers:build("personal",1,2)}}
+var GAPRX=/\bno card\b/i;
+function liveGaps(){ // hourly no-model check (hq/refresh_live.py). Fresh = under 3 hours old; it then replaces the sweep's own "no card" cards
+  var L=FEED&&FEED.live;if(!L||!L.ok||!L.at||(L.failed||[]).length||L.circlefit_error)return null;if(Date.now()-new Date(L.at).getTime()>3*3600000)return null;
+  var g=L.gaps||[];if(!g.length)return {item:null};var d=parseDay(L.tomorrow),at=new Date(L.at);
+  var t=at.getHours()%12||12,tm=t+":"+String(at.getMinutes()).padStart(2,"0")+(at.getHours()<12?"am":"pm");
+  return {item:{k:"live-gaps-"+L.tomorrow,who:"No card for "+DAYS[d.getDay()]+" "+MON[d.getMonth()]+" "+d.getDate()+": "+g.join(", "),w:"Checked CoachRx and CircleFit at "+tm+". Updates every hour.",l:[]}}}
+function tText(x){return x.m?String(x.m.who||""):heroTitle(x.it)}
+function tAct(x){if(x.m)return "";var l=(x.it.l||[])[0],u=l&&safe(l[1]);if(!u)return "";var lab=String(l[2]||"Open").split(/ [-:(]|, /)[0];if(lab.length>16)lab="Open";
+  return '<a class="tgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(lab)+'</a>'}
+function tDetail(x){var other=x.side==="work"?"Personal":"Work",h='<div class="tdet">';
+  if(x.m){if(MEDIT===x.k)return '<div class="tdet"><textarea class="iedit" id="medit">'+e(x.m.who)+'</textarea><div class="iact"><button class="ib" data-m="save">Save</button><button class="ib" data-m="cancel">Cancel</button></div></div>';
+    h+='<div class="tfull">'+e(x.m.who)+'</div><div class="iact"><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="flip">Move to '+other+'</button><button class="ib" data-m="toidea">Move to Ideas</button><button class="ib" data-m="pin">'+(x.pinned?'Unpin':'Pin to top')+'</button></div>';return h+'</div>'}
+  var i=x.it,w=cleanCopy(i.why||i.w||"");
+  if(i.q)h+='<blockquote>'+e(i.q)+'</blockquote>';if(w)h+='<div class="tfull">'+e(w)+'</div>';
+  var since=i.since?fmtDate(i.since):"";if(since||i.age)h+='<div class="sm">'+(since?'Since '+e(since):e(i.age||""))+'</div>';
+  var ls=(i.l||[]).slice(1);if(ls.length)h+='<div class="links">'+ls.map(function(a){var u=safe(a[1]);return u?'<a href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(a[2])+'</a>':''}).join('')+'</div>';
+  return h+'<div class="iact"><button class="ib" data-a="side">Move to '+other+'</button><button class="ib" data-a="pin">'+(x.pinned?'Unpin':'Pin to top')+'</button></div></div>'}
+function tRow(x,top){var op=!!OPEN["t:"+x.k]||MEDIT===x.k,cls=x.m?'mline trow':'item trow',da=x.m?' data-mk="'+e(x.k)+'"':' data-k="'+e(x.k)+'"';
+  return '<li class="'+cls+(op?' open':'')+(x.due||top?' due':'')+(top?' top':'')+'"'+da+'><div class="tline">'+(x.m?'<button class="tchk" data-m="done" aria-label="Done">&#10003;</button>':'<button class="tchk" data-a="done" aria-label="Done">&#10003;</button>')
+    +'<button class="ttext" data-t="'+e(x.k)+'">'+e(tText(x))+(x.due?' <small>due</small>':'')+'</button>'+tAct(x)+'</div>'+(op?tDetail(x):'')+'</li>'}
+function tHero(x){var op=!!OPEN["t:"+x.k]||MEDIT===x.k,cls=x.m?'mline':'item',da=x.m?' data-mk="'+e(x.k)+'"':' data-k="'+e(x.k)+'"';
+  var l=x.m?null:(x.it.l||[])[0],u=l&&safe(l[1]);
+  var h='<li class="'+cls+' hero thero"'+da+'><button class="htitle ttext" data-t="'+e(x.k)+'">'+e(tText(x))+'</button><div class="hact">';
+  h+=u?'<a class="hgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(l[2])+'</a>':'';
+  h+=x.m?'<button class="'+(u?'hchk':'hgo')+'" data-m="done">'+(u?'&#10003;':'Done')+'</button>':'<button class="'+(u?'hchk':'hgo')+'" data-a="done" aria-label="Done">'+(u?'&#10003;':'Done')+'</button>';
+  return h+'</div>'+(op?tDetail(x):'')+'</li>'}
+function tList(L,name,show){ // plain ranked checklist (CJ, Nov 10: Now/Today/Later "seems overbuilt")
+  var all=L.now.concat(L.today,L.later),h='<div class="tsub"><span>'+name+'</span><em>'+all.length+'</em></div>';
+  if(!all.length)return h+'<div class="note">Nothing on it.</div>';
+  var ok=OPEN["tl:"+name],vis=ok?all:all.slice(0,show);
+  h+='<ul class="tl">'+vis.map(function(x,i){return tRow(x,i===0&&name==="Work")}).join('')+'</ul>';
+  if(all.length>show)h+='<button class="tb tlater" data-tl="'+name+'">'+(ok?'Show less':(all.length-show)+' more')+'</button>';
+  return h}
+function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
+  var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
+  if(won&&!OPEN.wonlist)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
+  return h+tList(T.work,"Work",6)+tList(T.pers,"Personal",3)+'<button class="tb tlater" data-lane="todo">Full board</button></section>'}
 function draw(){
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){
@@ -1317,7 +1343,6 @@ function draw(){
     $("pw").focus();
     return;
   }
-  if(lane==="mock"){drawToday(false);return}
   if(lane==="hq"){drawHQ();return}
   if(lane==="ideas"){drawIdeas();return}
   if(lane==="week"){drawWeek();return}
@@ -1359,12 +1384,16 @@ document.addEventListener("click",function(ev){
   var hb=mt.closest&&mt.closest("[data-hr]");if(hb){var hi=+hb.dataset.hr;HRSEL=HRSEL===hi?null:hi;draw();return}
   var gb=mt.closest&&mt.closest("[data-go]");if(gb){var gt=gb.dataset.go;if(gt==="week"){OPEN["b:"+nextMonday()]=1;DAYSEL=null;goLane("week")}else{var ge=$(gt);if(ge)ge.scrollIntoView({behavior:"smooth",block:"start"})}return}
   if(mt.dataset&&mt.dataset.won){OPEN.wonlist=1;draw();return}
+  var ttb=mt.closest&&mt.closest("[data-t]");if(ttb){var tk="t:"+ttb.dataset.t;if(OPEN[tk])delete OPEN[tk];else OPEN[tk]=1;if(MEDIT===ttb.dataset.t)MEDIT=null;draw();return}
+  var tlb=mt.closest&&mt.closest("[data-tl]");if(tlb){var lk="tl:"+tlb.dataset.tl;if(OPEN[lk])delete OPEN[lk];else OPEN[lk]=1;draw();return}
   var lfb=mt.closest&&mt.closest("[data-lf]");if(lfb){LFOPEN=LFOPEN===lfb.dataset.lf?null:lfb.dataset.lf;draw();return}
   if(mt.dataset&&mt.dataset.health){HEALTHDAY=mt.dataset.health;goLane("health");return}
   var ml=mt.closest&&mt.closest("li.mline");
   if(ml&&mt.dataset&&mt.dataset.m){var mka=mt.dataset.m,mkk=ml.getAttribute("data-mk"),mlist=lsGet(MINE+"todo",[]),mh=null;mlist.forEach(function(x){if(x.k===mkk)mh=x});if(!mh)return;
     if(mka==="edit"){MEDIT=mkk;draw();var me=$("medit");if(me){me.focus();me.setSelectionRange(me.value.length,me.value.length)}return}
     if(mka==="cancel"){MEDIT=null;draw();return}
+    if(mka==="flip"){mh.side=mineSide(mh)==="work"?"personal":"work";mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush();toast("Moved to "+(mh.side==="work"?"Work":"Personal"));draw();return}
+    if(mka==="pin"){var ep2=ex(),was2=(ep2.pin||{}).k===mkk;ep2.pin={k:was2?"":mkk,ts:Date.now()};exSave(ep2);draw();return}
     if(mka==="save"){var mv=$("medit")&&$("medit").value.trim();MEDIT=null;if(mv&&mv!==mh.who){mh.who=mv;mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush()}draw();return}
     if(mka==="done"){mh.done=1;mh.ts=Date.now();var fr=mh.from;lsSet(MINE+"todo",mlist);if(fr){var i2=lsGet(IDEAS,[]);i2.forEach(function(i){if(i.k===fr&&i.todo){i.todo=0;i.ts=Date.now()}});lsSet(IDEAS,i2)}queuePush();draw();return}
     if(mka==="toidea"){var i3=lsGet(IDEAS,[]);i3.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:mh.who,ts:Date.now()});lsSet(IDEAS,i3);mh.done=1;mh.moved=1;mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush();toast("Moved to Ideas");draw();return}
@@ -1442,6 +1471,7 @@ document.addEventListener("click",function(ev){
     var src=null;
     (FEED&&FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){
       if(keyOf(i)===k)src=i})});
+    if(!src){var lg=liveGaps();if(lg&&lg.item&&keyOf(lg.item)===k)src=lg.item}
     if(!src)return;
     var cur=flagsFor(src);
     setFlag(k,t.dataset.a,t.dataset.a==="done"?!isDone(src):!cur[t.dataset.a],src);draw();return}
