@@ -1177,7 +1177,7 @@ window.hqLogFor=function(k,v,replace){var L=logState(),id="log-"+Date.now().toSt
 window.hqLogWords=function(k){return dayEntries(logState(),k).map(function(r){return r.e.text}).join(" / ")};
 function unlogged(){      // watch sessions with nothing written. Stays until he writes something or says nothing to add
   var L=logState(),today=dk(eveDate()),out=[],c=LOG_START,cut=logCut();if(c<cut)c=cut;
-  while(c<=today){var g=L.garmin[c],acts=((g&&g.acts)||[]).filter(function(a){return (a.min||0)>0});   // any watch session prompts (CJ, Nov 10 2026)
+  while(c<=today){var g=L.garmin[c],acts=((g&&g.acts)||[]).filter(function(a){return (a.min||0)>0&&!a.run});   // any watch session prompts, except a run: runs log themselves (CJ, Nov 10 2026)
     var any=Object.keys(L.entries).some(function(id){var x=L.entries[id];return x.date===c&&!x.deleted});
     if(acts.length&&!any)out.push({k:c,acts:acts});
     c=addDays(c,1)}
