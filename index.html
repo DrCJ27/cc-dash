@@ -268,7 +268,7 @@ var OPEN={}, PEND=0, HQ_ALL=0, FOLDS={};   // open folds/cards, redraw deferred 
 function typing(){var a=document.activeElement;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
 function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
 function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT,_me:MEDIT};["inew","ifind","iedit","medit","dlog","dmin","rlog"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
-function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie"||id==="_le"||id==="_me")return;if(id==="medit"){if(o._me===MEDIT)x.value=o[id];return}var x=document.getElementById(id);if(!x)return;if(id==="dlog"){if(o[id]&&o._le===LEDIT)x.value=o[id];return}if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
+function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie"||id==="_le"||id==="_me")return;var x=document.getElementById(id);if(!x)return;if(id==="medit"){if(o._me===MEDIT)x.value=o[id];return}if(id==="dlog"){if(o[id]&&o._le===LEDIT)x.value=o[id];return}if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
 var HQ=lsGet0(HQCFG,null);           // {url,key} -- rides inside the encrypted todo feed
 var SYNC={state:HQ?"":"waiting for feed",ok:null};
 function $(id){return document.getElementById(id)}
@@ -593,7 +593,7 @@ function sysHTML(){
   else if(GLANCE&&GLANCE.last_heartbeat){var m=Math.round((Date.now()-new Date(GLANCE.last_heartbeat).getTime())/60000);
     rows.push(m<2?'Synced just now':(m<120?'Synced '+m+' minutes ago':'<span class="amber">Mac asleep or offline for '+Math.round(m/60)+' hours</span>'))}
   else rows.push(HQ?'Connecting':'Waiting for the first update');
-  return '<div class="sys" id="sys"><span>'+rows.join('</span><span>')+'</span></div>';
+  return '<div class="sys" id="sys"><span>'+rows.join('</span><span>')+'</span><button id="lookswitch" style="background:none;border:0;color:inherit;font:inherit;text-decoration:underline;padding:0;min-height:40px">'+(LB?'Old look':'New look')+'</button></div>';
 }
 function drawSys(){var s=$("sys");if(s)s.outerHTML=sysHTML();var ds=$("discsync");if(ds)ds.textContent=discSyncText()}
 
@@ -1587,7 +1587,8 @@ document.addEventListener("click",function(ev){
     var m=lsGet(MINE+"todo",[]);
     m.push({k:"mine-"+Date.now(),who:v,ts:Date.now()});lsSet(MINE+"todo",m);
     queuePush();$("ai").value="";draw();return}
-  if(t.dataset&&t.dataset.lane){goLane(t.dataset.lane);return}
+  var lnb=t.closest&&t.closest("[data-lane]");if(lnb){goLane(lnb.dataset.lane);return}
+  if(t.id==="lookswitch"){try{if(LB)localStorage.removeItem("cc-look");else localStorage.setItem("cc-look","b")}catch(x){}location.reload();return}
   var li=t.closest&&t.closest("li.item");
   if(li&&t.dataset&&t.dataset.a){
     var k=li.getAttribute("data-k");
@@ -1608,6 +1609,7 @@ document.addEventListener("click",function(ev){
 });
 window.addEventListener("hashchange",function(){
   var l=location.hash.slice(1);
+  if(l==="look"||l==="oldlook"){try{if(l==="look")localStorage.setItem("cc-look","b");else localStorage.removeItem("cc-look");history.replaceState(null,"","#"+(lane||"hq"))}catch(x){}location.reload();return}
   if(l==="list"){LISTOPEN=true;l="hq";if(lane==="hq"){draw();window.scrollTo(0,0)}}
   if(/^health-/.test(l)){HEALTHDAY=l.slice(7);l="health"}
   if((LANES.some(function(x){return x[0]===l})||l==="panel")&&l!==lane){lane=l;if(FEED||l==="health")draw();else load()}});
