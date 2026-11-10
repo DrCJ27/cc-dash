@@ -752,7 +752,7 @@ function listOpen(day){   // lines open from before this day, oldest first
   for(;dk(d)<day;d.setDate(d.getDate()+1)){var ky=dk(d),w=d.getDay();if(w!==0&&w!==6&&!seen[ky])flowLines(d,L).forEach(function(t){put(t,ky,ms(ky))})}
   (L.posted||[]).forEach(function(p){p.lines.forEach(function(x){if(!x[1])return;var m=map[lkey(x[0])];if(m&&ms(p.day)>=ms(m.from)-6*864e5)delete map[lkey(x[0])]})});
   return Object.keys(map).map(function(k){return map[k]}).filter(function(m){var c=clear[m.k];return !(c&&c.x)||m.at>c.x}).sort(function(a,b){return a.from<b.from?-1:1})}
-function listClear(k){var E=ex(),sd=seasonData(),L=(sd&&sd.list)||{},m=listOpen(dk(listDay())).filter(function(x){return x.k===k})[0];E.listclear=E.listclear||{};
+function listClear(k){var E=ex(),sd=seasonData(),L=(sd&&sd.list)||{},m=listOpen(dk(listDay())).filter(function(x){return x.k===k})[0]||(dayList()||[]).filter(function(x){return x.k===k})[0];E.listclear=E.listclear||{};
   LISTUNDO={k:k,t:m?m.t:k,prev:E.listclear[k]||null};E.listclear[k]={x:Date.now(),ts:Date.now()};exSave(E);
   var inFlow=flowLines(listDay(),L).some(function(w){return lkey(w)===k});
   var s=lsGet(sheetKey(),"");if(s&&!inFlow)lsSet(sheetKey(),s.split("\n").filter(function(x){return lkey(lText(x))!==k}).join("\n"))}
@@ -1301,8 +1301,8 @@ function dayList(){ // today's list as he posted it in #1-daily-to-do (CJ, Nov 1
   var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[],day=dk(listDay()),clear=ex().listclear||{},post=null;
   if(!P.some(function(p){return p.day===day}))day=dk(eveDate());   // at night the posted list is tomorrow's; in the day it is today's
   P.forEach(function(p){if(p.day===day)post=p});if(!post)return null;
-  var t0=parseDay(day).getTime()-864e5;
-  return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k];return !x[1]&&!lSkip(x[0])&&!lHead(x[0])&&!(c&&c.x&&c.x>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work"}})}
+  var t0=parseDay(day).getTime()-6*36e5;   // a tick after 6pm the evening before counts for this list
+  return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k];return !x[1]&&!lSkip(x[0])&&!lHead(x[0])&&!(c&&c.x&&c.x>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work",day:day}})}
 function tText(x){return x.daily?x.t:(x.m?String(x.m.who||""):heroTitle(x.it))}
 function tAct(x){if(x.m)return "";var l=(x.it.l||[])[0],u=l&&safe(l[1]);if(!u)return "";var lab=String(l[2]||"Open").split(/ [-:(]|, /)[0];if(lab.length>16)lab="Open";
   return '<a class="tgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(lab)+'</a>'}
@@ -1333,7 +1333,7 @@ function tList(L,name,show){ // plain ranked checklist (CJ, Nov 10: Now/Today/La
 function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
   var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
   if(won&&!OPEN.wonlist)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
-  var DL=dayList();if(DL){h+='<div class="tsub"><span>Today\'s list</span><em>'+DL.length+' left</em></div>'+(DL.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+'</ul>':'<div class="note">All done.</div>')}
+  var DL=dayList();if(DL){h+='<div class="tsub"><span>'+(DL.length&&DL[0].day!==dk(eveDate())?'Tomorrow':'Today')+'\'s list</span><em>'+DL.length+' left <button class="b-more" id="lopen">edit</button></em></div>'+(DL.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+'</ul>':'<div class="note">All done.</div>')}
   return h+tList(T.work,DL?"Also waiting":"Work",DL?3:6)+tList(T.pers,"Personal",3)+'<button class="tb tlater" data-lane="todo">Full board</button></section>'}
 function draw(){
   var phrase=localStorage.getItem(KEYSTORE);
