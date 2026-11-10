@@ -225,14 +225,14 @@ html.lb{--bg:#050608;--raise:#12141A;--raise2:#1C2029;--line:#232832;--ink:#FFFF
 .lb .toast{border-radius:999px;font-weight:600}.lb .sys{border-top:0}.lb .gate input,.lb .gate button{border-radius:14px}
 .lb h2{font-size:16px;font-weight:500}
 .lb .grid3,.lb .sect,.lb .rings,.lb .rtile,.lb .tl,.lb li.trow,.lb .tline{min-width:0;max-width:100%}.lb .page{overflow-x:clip}
-.lb #tlist{outline:0;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:14px 22px}.lb #tlist .ttl{flex:none}
+.lb #tlist{outline:0;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:14px 22px}.lb #tlist .ttl{flex:none}.lb #tlist>.day{flex:1 1 100%}
 .lb .page>.g-chal,.lb .page>.s-goal{order:0}.lb .page>.sys{order:9}
 .lb .tsub .b-more{min-height:40px;padding:0 8px}.lb .links a,.lb .links span{min-height:40px;display:inline-flex;align-items:center}.lb .b-done,.lb .b-pin,.lb .b-star{width:40px;height:40px}.lb .b-pin,.lb .b-star{right:54px}
 .lb .dact button,.lb .lf,.lb .tag,.lb .ib.st{min-height:40px}.lb .tag{padding:0 12px}
 .lb .wr.sel{outline:1.5px solid var(--work);outline-offset:-1.5px;background:var(--raise2)}.lb .wr.today{outline:0}.lb .wr.today .wd{color:var(--work)}
 .lb .blist{display:flex;flex-wrap:wrap;gap:6px}.lb .blist .lf{width:auto;margin:0}
 .lb .dtitle,.lb .s-goal .ttl{color:var(--ink)}.lb .dact,.lb .dent{border-left:0;padding-left:0}
-.lb #tlist .day{padding:0;background:none}.lb .day .iact .ib{border-radius:14px;padding:8px 14px;text-align:left;min-height:40px}
+.lb #tlist .day{padding:0;background:none}.lb .day .iact .ib{min-height:40px}
 .lb .toast{left:16px;right:16px;transform:none;margin:0 auto;width:fit-content;max-width:calc(100% - 32px);border-radius:16px;text-align:center}
 .lb .hr.now{border-radius:0}.lb .hr i:first-of-type{border-radius:5px 5px 0 0}.lb .ghost{border-radius:5px 5px 0 0;border-color:var(--mute)}
 .lb .s-disc .bignum b{color:var(--ink)}
@@ -254,18 +254,31 @@ html.lb{--bg:#050608;--raise:#12141A;--raise2:#1C2029;--line:#232832;--ink:#FFFF
 .lb .sect li.idea,.lb .sect li.mline{background:var(--raise2)}.lb .twin{gap:14px}.lb .ihead{font-size:12.5px}
 .lb .wv{height:36px}
 .lb #unhide{border-radius:999px!important;border:1px solid #343A46!important;background:none!important;color:var(--ink)!important;min-height:40px;padding:0 16px!important}
+.lb .blist{flex-direction:row}.lb .blist .bl{flex:0 0 100%}
+.lb .s-remind{outline:0}.g-remind{order:0}
+.lb .sect li.mline.trow{background:none}
+.lb span.tchk.on::before{background:none;color:var(--work)}
+.lb li.trow.done .ttext{padding:5px 2px;font-size:13.5px}.lb li.trow.done{border-top-color:transparent}
+.lb .rung.gone{opacity:1;color:var(--mute)}.lb .rung.gone b{color:var(--ink2)}
+.lb li.idea.arch{opacity:1}.lb li.idea.arch .itext{color:var(--ink2)}
+.lb #lopen{min-width:44px}.lb h2.tog{min-height:40px;display:flex;align-items:center}
+.lb .itext .tag{min-height:0;padding:1px 8px}
+.lb .links span{border:0;padding:0;color:var(--ink2);min-height:0}
+.lb .gate{margin:0 auto;padding-top:14vh}
+.lb .ttext small{text-transform:none;letter-spacing:0;font-size:12.5px}
 @media (max-width:699px){.lb .g-band{order:0}.rings{grid-template-columns:1fr 1fr;gap:10px}.rtile{flex-direction:column;align-items:flex-start;padding:14px;gap:8px}.ring{width:56px;height:56px}.rv2 b{font-size:28px}.rv2 span{margin-top:2px;font-size:14px}}
 @media (min-width:700px){.rings{grid-template-columns:1fr 1fr}}
 @media (min-width:1100px){
 .lb .page{max-width:1480px;padding-inline:36px}.lb .tabs{padding-left:30px}
 .lb .kick{font-size:15px;font-weight:400;color:var(--ink2)}.lb .head h1{font-size:40px}.lb .ttl{font-size:16px}.lb .hours{height:120px}.lb .bignum b{font-size:46px}.lb .g-lights,.lb .g-disc{align-self:stretch}
-.lb .grid3{gap:14px;grid-template-rows:auto auto auto auto 1fr;grid-template-areas:
+.lb .grid3{gap:14px;grid-template-rows:auto auto auto auto auto 1fr;grid-template-areas:
  "next next next next next band band band band band band band"
  "next next next next next time time time time time time time"
+ "next next next next next remind remind remind remind remind remind remind"
  "next next next next next lights lights lights lights disc disc disc"
  "next next next next next wline wline wline wline wline wline wline"
  "next next next next next idea idea idea idea idea idea idea"}
-.g-wline{grid-area:wline}
+.g-wline{grid-area:wline}.g-remind{grid-area:remind}
 .lb .wrows{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px}
 .lb .wr{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:10px;min-height:128px;padding:16px;border-radius:22px}.lb .wr .wx{justify-content:flex-start;margin-top:auto}.lb .wm .p{white-space:normal}
 }
@@ -1329,8 +1342,8 @@ function drawToday(panel){
   if(panel)h+=captureHTML();
   h+=mottoHTML();
   h+='<div class="head '+H.c+'"><div class="kick">'+DAYS[ed.getDay()]+' '+MON[ed.getMonth()]+' '+ed.getDate()+'</div><h1>'+e(H.t)+'</h1>'+(H.sub?'<div class="sub">'+e(H.sub)+'</div>':'')+'</div>';
-  if(LB){h+=listCardHTML()+reminderHTML();
-    h+='<div class="grid3">'+todoHTML(won)+ringsHTML()+timelineHTML(k).replace('</h2>','</h2>'+dayNumsHTML(k))+lightsHTML()+discHTML()+weekLineHTML()+(panel?'':captureHTML())+'</div>';
+  if(LB){h+=listCardHTML();
+    h+='<div class="grid3">'+todoHTML(won)+ringsHTML()+reminderHTML().replace('class="sect s-remind"','class="sect s-remind g-remind"')+timelineHTML(k).replace('</h2>','</h2>'+dayNumsHTML(k))+lightsHTML()+discHTML()+weekLineHTML()+(panel?'':captureHTML())+'</div>';
     h+=sysHTML()+'</div>';shell(h);wireCallIt();wireCapture(foc);return}
   h+=nightsStrip()+sinceLine();
   h+=listCardHTML()+reminderHTML();   // My list on Today too (CJ, Nov 9: "my to do list is very important and its missing things")
@@ -1481,7 +1494,7 @@ function dayDone(){   // the lines on the same posted list that are finished: st
 function doneRow(x){return '<li class="trow done"><div class="tline">'+(!x.mine?'<span class="tchk on" title="Crossed off in Slack">&#10003;</span>':'<button class="tchk on" data-lunclr="'+e(x.k)+'" aria-label="Not done, put it back">&#10003;</button>')+'<span class="ttext">'+e(x.t)+'</span></div></li>'}
 function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
   var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
-  if(won&&!OPEN.wonlist)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
+  if(won&&!OPEN.wonlist&&!LB)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
   var DL=dayList(),DD=DL?dayDone():[];if(DL){h+='<div class="tsub"><span>'+(DL.length&&DL[0].day!==dk(eveDate())?'Tomorrow':'Today')+'\'s list</span><em>'+DL.length+' left'+(DD.length?' of '+(DL.length+DD.length):'')+' <button class="b-more" id="lopen">edit</button></em></div>'+(DL.length||DD.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+DD.map(doneRow).join('')+'</ul>':'<div class="note">All done.</div>')}
   return h+tList(T.work,DL?(LB?"Everything else":"Also waiting"):"Work",DL?(LB?6:3):(LB?8:6))+tList(T.pers,"Personal",3)+'<button class="tb tlater fullb" data-lane="todo">Full board</button></section>'}
 function draw(){
