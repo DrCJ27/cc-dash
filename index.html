@@ -874,7 +874,7 @@ function listSeen(txt){var key=sheetKey();if(LISTSHOWN.key!==key)LISTSHOWN={key:
 function listSave(mark){   // what is on the list stays open for that day. Only a line he was shown and then removed closes
   var ta=$("sdraft");if(!ta)return;var E=ex(),day=dk(listDay()),now=Date.now(),has={};E.listopen=E.listopen||{};E.listclear=E.listclear||{};
   ta.value.split("\n").forEach(function(x){var t=lText(x);if(lHead(t)||lSkip(t))return;var k=lkey(t);has[k]=1;var old=E.listopen[k];E.listopen[k]={t:t,from:day,at:old&&old.from===day?old.at:now,ts:now}});
-  listSeen(ta.value);Object.keys(LISTSHOWN.keys).forEach(function(k){if(!has[k])E.listclear[k]={x:now,ts:now,rm:1}});
+  listSeen(ta.value);Object.keys(LISTSHOWN.keys).forEach(function(k){if(has[k])return;var o=E.listclear[k];if(o&&o.x&&!o.rm&&now-o.x<36*36e5)return;E.listclear[k]={x:now,ts:now,rm:1}});   // never overwrite a real tick with an editor removal
   if(mark){E.listdone=E.listdone||{};E.listdone[dk(listEve())]=now}exSave(E)}
 function listCalls(L){return !!(L.calls&&L.at&&Date.now()/1000-L.at<21600)}   // 6 hours: older means the Mac was asleep
 function listCardOn(){var hr=new Date().getHours(),wd=listDay().getDay();return LISTOPEN||((hr>=21||hr<4)&&wd!==0&&wd!==6&&!listDone()&&!listPosted(dk(listDay())))}
@@ -1436,7 +1436,8 @@ function dayList(){ // today's list as he posted it in #1-daily-to-do (CJ, Nov 1
   var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[],day=dk(listDay()),clear=ex().listclear||{},post=null;
   if(!P.some(function(p){return p.day===day}))day=dk(eveDate());   // at night the posted list is tomorrow's; in the day it is today's
   P.forEach(function(p){if(p.day===day)post=p});if(!post)return null;
-  var t0=parseDay(day).getTime()-6*36e5;   // a tick after 6pm the evening before counts for this list
+  var t0=Math.max(parseDay(day).getTime()-6*36e5,(post.at||0)*1000);   // a tick made before this list was posted is not a tick on it
+     // a tick after 6pm the evening before counts for this list
   return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k],back=c&&c.x===0&&(c.ts||0)>t0;return (!x[1]||back)&&!lSkip(x[0])&&!lHead(x[0])&&!(tickX(clear,k)>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work",day:day}})}
 function tText(x){if(x.daily)return x.t;if(x.m)return String(x.m.who||"");var i=x.it,nr=newRecs(i),t=heroTitle(i),n=(i.more||[]).length;if(nr.length)return "New from "+String(i.pname||"them").split(" ")[0]+": "+nr[0].t;return (n?"("+(n+1)+") ":"")+t}
 function tAct(x){if(x.m)return "";var l=(x.it.l||[])[0],u=l&&safe(l[1]);if(!u)return "";var lab=String(l[2]||"Open").split(/ [-:(]|, /)[0];if(lab.length>16)lab="Open";
@@ -1474,7 +1475,8 @@ function dayDone(){   // the lines on the same posted list that are finished: st
   var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[],day=dk(listDay()),clear=ex().listclear||{},post=null;
   if(!P.some(function(p){return p.day===day}))day=dk(eveDate());
   P.forEach(function(p){if(p.day===day)post=p});if(!post)return [];
-  var t0=parseDay(day).getTime()-6*36e5;
+  var t0=Math.max(parseDay(day).getTime()-6*36e5,(post.at||0)*1000);   // a tick made before this list was posted is not a tick on it
+  
   return post.lines.filter(function(x){if(lSkip(x[0])||lHead(x[0]))return false;var k=lkey(x[0]),c=clear[k],back=c&&c.x===0&&(c.ts||0)>t0;return (x[1]&&!back)||tickX(clear,k)>t0}).map(function(x){var k=lkey(x[0]);return {k:k,t:x[0],mine:tickX(clear,k)>t0}})}
 function doneRow(x){return '<li class="trow done"><div class="tline">'+(!x.mine?'<span class="tchk on" title="Crossed off in Slack">&#10003;</span>':'<button class="tchk on" data-lunclr="'+e(x.k)+'" aria-label="Not done, put it back">&#10003;</button>')+'<span class="ttext">'+e(x.t)+'</span></div></li>'}
 function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
