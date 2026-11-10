@@ -765,7 +765,7 @@ function listSave(mark){   // what is on the list stays open for that day. Only 
   listSeen(ta.value);Object.keys(LISTSHOWN.keys).forEach(function(k){if(!has[k])E.listclear[k]={x:now,ts:now}});
   if(mark){E.listdone=E.listdone||{};E.listdone[dk(listEve())]=now}exSave(E)}
 function listCalls(L){return !!(L.calls&&L.at&&Date.now()/1000-L.at<21600)}   // 6 hours: older means the Mac was asleep
-function listCardOn(){var hr=new Date().getHours(),wd=listDay().getDay();return LISTOPEN||((hr>=21||hr<4)&&wd!==0&&wd!==6&&!listDone())}
+function listCardOn(){var hr=new Date().getHours(),wd=listDay().getDay();return LISTOPEN||((hr>=21||hr<4)&&wd!==0&&wd!==6&&!listDone()&&!listPosted(dk(listDay())))}
 function draftNight(){
   var sd=seasonData(),L=(sd&&sd.list)||{},td=listDay(),lines=[];
   if(listCalls(L))(L.calls[dk(td)]||[]).forEach(function(c){lines.push(c)});else lines.push("Calendar did not load. Check your calls");
@@ -775,6 +775,7 @@ function draftNight(){
 function sheetKey(){return "cc-sheet-"+dk(listEve())}
 function listCardHTML(){   // always on the page (CJ, Nov 8: "i want everything in this page always"); full 9pm-4am, one line otherwise
   var hr=new Date().getHours(),am=hr>=4&&hr<12;
+  if(!listCardOn()&&dayList())return '';
   if(!listCardOn()){var ev=eveDate();if(am)ev.setDate(ev.getDate()-1);
     var at=(ex().listdone||{})[dk(ev)],nx=new Date(ev);nx.setDate(nx.getDate()+1);
     var posted=listPosted(dk(nx)),wk=nx.getDay()!==0&&nx.getDay()!==6,st='';
@@ -1296,7 +1297,13 @@ function liveGaps(){ // hourly no-model check (hq/refresh_live.py). Fresh = unde
   var g=L.gaps||[];if(!g.length)return {item:null};var d=parseDay(L.tomorrow),at=new Date(L.at);
   var t=at.getHours()%12||12,tm=t+":"+String(at.getMinutes()).padStart(2,"0")+(at.getHours()<12?"am":"pm");
   return {item:{k:"live-gaps-"+L.tomorrow,who:"No card for "+DAYS[d.getDay()]+" "+MON[d.getMonth()]+" "+d.getDate()+": "+g.join(", "),w:"Checked CoachRx and CircleFit at "+tm+". Updates every hour.",l:[]}}}
-function tText(x){return x.m?String(x.m.who||""):heroTitle(x.it)}
+function dayList(){ // today's list as he posted it in #1-daily-to-do (CJ, Nov 10: "i made the list in daily to do"). Struck in Slack or ticked here = gone
+  var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[],day=dk(listDay()),clear=ex().listclear||{},post=null;
+  if(!P.some(function(p){return p.day===day}))day=dk(eveDate());   // at night the posted list is tomorrow's; in the day it is today's
+  P.forEach(function(p){if(p.day===day)post=p});if(!post)return null;
+  var t0=parseDay(day).getTime()-864e5;
+  return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k];return !x[1]&&!lSkip(x[0])&&!lHead(x[0])&&!(c&&c.x&&c.x>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work"}})}
+function tText(x){return x.daily?x.t:(x.m?String(x.m.who||""):heroTitle(x.it))}
 function tAct(x){if(x.m)return "";var l=(x.it.l||[])[0],u=l&&safe(l[1]);if(!u)return "";var lab=String(l[2]||"Open").split(/ [-:(]|, /)[0];if(lab.length>16)lab="Open";
   return '<a class="tgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(lab)+'</a>'}
 function tDetail(x){var other=x.side==="work"?"Personal":"Work",h='<div class="tdet">';
@@ -1307,7 +1314,7 @@ function tDetail(x){var other=x.side==="work"?"Personal":"Work",h='<div class="t
   var since=i.since?fmtDate(i.since):"";if(since||i.age)h+='<div class="sm">'+(since?'Since '+e(since):e(i.age||""))+'</div>';
   var ls=(i.l||[]).slice(1);if(ls.length)h+='<div class="links">'+ls.map(function(a){var u=safe(a[1]);return u?'<a href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(a[2])+'</a>':''}).join('')+'</div>';
   return h+'<div class="iact"><button class="ib" data-a="side">Move to '+other+'</button><button class="ib" data-a="pin">'+(x.pinned?'Unpin':'Pin to top')+'</button></div></div>'}
-function tRow(x,top){var op=!!OPEN["t:"+x.k]||MEDIT===x.k,cls=x.m?'mline trow':'item trow',da=x.m?' data-mk="'+e(x.k)+'"':' data-k="'+e(x.k)+'"';
+function tRow(x,top){if(x.daily)return '<li class="trow"><div class="tline"><button class="tchk" data-lclr="'+e(x.k)+'" aria-label="Done">&#10003;</button><span class="ttext">'+e(x.t)+'</span></div></li>';var op=!!OPEN["t:"+x.k]||MEDIT===x.k,cls=x.m?'mline trow':'item trow',da=x.m?' data-mk="'+e(x.k)+'"':' data-k="'+e(x.k)+'"';
   return '<li class="'+cls+(op?' open':'')+(x.due||top?' due':'')+(top?' top':'')+'"'+da+'><div class="tline">'+(x.m?'<button class="tchk" data-m="done" aria-label="Done">&#10003;</button>':'<button class="tchk" data-a="done" aria-label="Done">&#10003;</button>')
     +'<button class="ttext" data-t="'+e(x.k)+'">'+e(tText(x))+(x.due?' <small>due</small>':'')+'</button>'+tAct(x)+'</div>'+(op?tDetail(x):'')+'</li>'}
 function tHero(x){var op=!!OPEN["t:"+x.k]||MEDIT===x.k,cls=x.m?'mline':'item',da=x.m?' data-mk="'+e(x.k)+'"':' data-k="'+e(x.k)+'"';
@@ -1326,7 +1333,8 @@ function tList(L,name,show){ // plain ranked checklist (CJ, Nov 10: Now/Today/La
 function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
   var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
   if(won&&!OPEN.wonlist)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
-  return h+tList(T.work,"Work",6)+tList(T.pers,"Personal",3)+'<button class="tb tlater" data-lane="todo">Full board</button></section>'}
+  var DL=dayList();if(DL){h+='<div class="tsub"><span>Today\'s list</span><em>'+DL.length+' left</em></div>'+(DL.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+'</ul>':'<div class="note">All done.</div>')}
+  return h+tList(T.work,DL?"Also waiting":"Work",DL?3:6)+tList(T.pers,"Personal",3)+'<button class="tb tlater" data-lane="todo">Full board</button></section>'}
 function draw(){
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){
