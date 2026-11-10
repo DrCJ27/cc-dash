@@ -157,6 +157,7 @@ li.hero{padding:14px;background:var(--next);color:#090B10;gap:10px}
 .s-todo .ttl{font-size:30px}.tsub{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:5px;margin:14px 0 2px;font:800 22px/1.1 "Big Shoulders Display",Impact,sans-serif;text-transform:uppercase}.tsub em{font:500 14px Archivo,sans-serif;color:var(--mute);text-transform:none}
 .tb{display:block;font:800 14px "Big Shoulders Display",Impact,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:12px 0 4px}.tb.now{color:var(--next)}.tb em{font-style:normal}button.tlater{background:none;border:0;padding:6px 0;min-height:36px;text-align:left}
 .tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+li.trow.done .ttext{text-decoration:line-through;color:var(--mute)}.tchk.on{display:flex;align-items:center;justify-content:center;color:var(--win);border-color:var(--win)}
 li.trow{background:var(--raise);padding:4px 6px;box-shadow:none;display:block}li.trow.due{box-shadow:inset 3px 0 0 var(--next)}
 .tline{display:flex;align-items:center;gap:8px;min-width:0}
 .tchk{flex:0 0 40px;height:40px;background:none;border:2px solid var(--ink2);border-radius:4px;color:var(--mute);font-size:16px;padding:0}
@@ -186,6 +187,7 @@ html.lb{--bg:#050608;--raise:#12141A;--raise2:#1C2029;--line:#232832;--ink:#FFFF
 .lb .tl{gap:0}.lb li.trow,.lb li.item.trow,.lb li.mline.trow{background:none;padding:0;border-radius:0;box-shadow:none;border-top:1px solid var(--line)}.lb .tl li.trow:first-child{border-top:0}
 .lb .tchk{flex:0 0 40px;height:40px;border:0;background:none;position:relative;color:transparent;border-radius:0}
 .lb .tchk::before{content:"";position:absolute;left:9px;top:9px;width:20px;height:20px;border:1.5px solid #4A5160;border-radius:50%}
+.lb .tchk.on{color:transparent}.lb .tchk.on::before{content:"\\2713";display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#04130D;background:var(--work);border-color:var(--work)}
 .lb .tchk:hover::before,.lb .tchk:active::before{border-color:var(--work);background:rgba(0,245,160,.25)}
 .lb .ttext{font-size:15px;padding:9px 2px}.lb .ttext small{color:var(--dist);font-weight:500}
 .lb li.trow.top{border-top:0;background:linear-gradient(90deg,rgba(0,245,160,.2),rgba(0,245,160,0) 85%);border-radius:12px}.lb li.trow.top+li.trow{border-top:0}
@@ -1452,10 +1454,17 @@ function tList(L,name,show){ // plain ranked checklist (CJ, Nov 10: Now/Today/La
   h+='<ul class="tl">'+vis.map(function(x,i){return tRow(x,i===0&&name==="Work")}).join('')+'</ul>';
   if(all.length>show)h+='<button class="tb tlater" data-tl="'+name+'">'+(ok?'Show less':(all.length-show)+' more')+'</button>';
   return h}
+function dayDone(){   // the lines on the same posted list that are finished: struck in Slack, or ticked here
+  var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[],day=dk(listDay()),clear=ex().listclear||{},post=null;
+  if(!P.some(function(p){return p.day===day}))day=dk(eveDate());
+  P.forEach(function(p){if(p.day===day)post=p});if(!post)return [];
+  var t0=parseDay(day).getTime()-6*36e5;
+  return post.lines.filter(function(x){if(lSkip(x[0])||lHead(x[0]))return false;var c=clear[lkey(x[0])];return x[1]||(c&&c.x&&c.x>t0)}).map(function(x){return {k:lkey(x[0]),t:x[0],slack:!!x[1]}})}
+function doneRow(x){return '<li class="trow done"><div class="tline">'+(x.slack?'<span class="tchk on" title="Crossed off in Slack">&#10003;</span>':'<button class="tchk on" data-lunclr="'+e(x.k)+'" aria-label="Not done, put it back">&#10003;</button>')+'<span class="ttext">'+e(x.t)+'</span></div></li>'}
 function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
   var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
   if(won&&!OPEN.wonlist)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
-  var DL=dayList();if(DL){h+='<div class="tsub"><span>'+(DL.length&&DL[0].day!==dk(eveDate())?'Tomorrow':'Today')+'\'s list</span><em>'+DL.length+' left <button class="b-more" id="lopen">edit</button></em></div>'+(DL.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+'</ul>':'<div class="note">All done.</div>')}
+  var DL=dayList(),DD=DL?dayDone():[];if(DL){h+='<div class="tsub"><span>'+(DL.length&&DL[0].day!==dk(eveDate())?'Tomorrow':'Today')+'\'s list</span><em>'+DL.length+' left'+(DD.length?' of '+(DL.length+DD.length):'')+' <button class="b-more" id="lopen">edit</button></em></div>'+(DL.length||DD.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+DD.map(doneRow).join('')+'</ul>':'<div class="note">All done.</div>')}
   return h+tList(T.work,DL?(LB?"Everything else":"Also waiting"):"Work",DL?(LB?6:3):(LB?8:6))+tList(T.pers,"Personal",3)+'<button class="tb tlater fullb" data-lane="todo">Full board</button></section>'}
 function draw(){
   var phrase=localStorage.getItem(KEYSTORE);
@@ -1551,6 +1560,7 @@ document.addEventListener("click",function(ev){
   if(mt&&mt.id==="scopy"){var sd0=$("sdraft"),tx=sd0?sd0.value:"";listSave(false);var okc=function(){SHEETMSG="Copied";mt.textContent="Copied"};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(okc).catch(function(){fallbackCopy(sd0,mt)});else fallbackCopy(sd0,mt);return}
   if(mt&&mt.dataset&&mt.dataset.lclr){listClear(mt.dataset.lclr);draw();return}
+  if(mt&&mt.dataset&&mt.dataset.lunclr){var EU=ex();EU.listclear=EU.listclear||{};EU.listclear[mt.dataset.lunclr]={x:0,ts:Date.now()};exSave(EU);draw();return}
   if(mt&&mt.id==="lundo"){listUndo();draw();return}
   if(mt&&mt.id==="sdone"){listSave(true);LISTUNDO=null;CALLSHEET=false;LISTOPEN=false;if(location.hash==="#list"){try{history.replaceState(null,"","#hq")}catch(x){}}draw();return}
   if(mt&&mt.id==="sredo"){lsSet(sheetKey(),"");SHEETMSG="";LISTUNDO=null;draw();return}
