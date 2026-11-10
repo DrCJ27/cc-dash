@@ -223,16 +223,20 @@ function fmtDate(iso){
   return lbl;
 }
 function setFlag(k,n,v,it){var f=flags();var o=f[k]||(f[k]={});
- if(v){o[n]=1; if(n==="done"&&it)o.at=(it.horizon||it.latest||it.since||"");}
- else {delete o[n]; if(n==="done")delete o.at;}
+ if(v){o[n]=1; if(n==="done"&&it){o.at=(it.horizon||it.latest||it.since||"");if(it.recs)o.seen=it.recs.map(function(r){return r.f});else delete o.seen}}
+ else {delete o[n]; if(n==="done"){delete o.at;delete o.seen}}
  o.ts=Date.now();                     // tombstones kept for cross-device merge
  lsSet(FLAGS+flagLane(),f);
  if(flagLane()==="todo")queuePush();}
 function flagsFor(it){return flags()[keyOf(it)]||{}}
 // Cleared means CLEARED. Comes back only when the topic itself moves (newer
 // dated event than the one cleared). Reworded summaries never resurface it.
+// A row about one person carries `recs`: every raw message the pulls hold from them. A tick
+// stores the ones it showed; the row returns only when one appears that he has not seen.
+function newRecs(it){var f=flagsFor(it),s=f.seen;if(!it.recs||!f.done||!s)return [];return it.recs.filter(function(r){return s.indexOf(r.f)<0})}
 function isDone(it){var f=flagsFor(it);
  if(!f.done)return false;
+ if(it.recs){if(!f.seen)return false;return newRecs(it).length===0}
  if(!f.at)return true;
  var cur=it.latest||it.since||"";
  if(!cur)return true;
@@ -1303,13 +1307,15 @@ function dayList(){ // today's list as he posted it in #1-daily-to-do (CJ, Nov 1
   P.forEach(function(p){if(p.day===day)post=p});if(!post)return null;
   var t0=parseDay(day).getTime()-6*36e5;   // a tick after 6pm the evening before counts for this list
   return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k];return !x[1]&&!lSkip(x[0])&&!lHead(x[0])&&!(c&&c.x&&c.x>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work",day:day}})}
-function tText(x){return x.daily?x.t:(x.m?String(x.m.who||""):heroTitle(x.it))}
+function tText(x){if(x.daily)return x.t;if(x.m)return String(x.m.who||"");var i=x.it,nr=newRecs(i),t=heroTitle(i);if(nr.length){var pn=String(i.who||"").split(/[:,]| (?:asked|texted|sent|is|wants|leaves|logged)\b/)[0];t=pn+" sent something new: "+nr[0].t}return t+(i.more&&i.more.length?" (+"+i.more.length+" more)":"")}
 function tAct(x){if(x.m)return "";var l=(x.it.l||[])[0],u=l&&safe(l[1]);if(!u)return "";var lab=String(l[2]||"Open").split(/ [-:(]|, /)[0];if(lab.length>16)lab="Open";
   return '<a class="tgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(lab)+'</a>'}
 function tDetail(x){var other=x.side==="work"?"Personal":"Work",h='<div class="tdet">';
   if(x.m){if(MEDIT===x.k)return '<div class="tdet"><textarea class="iedit" id="medit">'+e(x.m.who)+'</textarea><div class="iact"><button class="ib" data-m="save">Save</button><button class="ib" data-m="cancel">Cancel</button></div></div>';
     h+='<div class="tfull">'+e(x.m.who)+'</div><div class="iact"><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="flip">Move to '+other+'</button><button class="ib" data-m="toidea">Move to Ideas</button><button class="ib" data-m="pin">'+(x.pinned?'Unpin':'Pin to top')+'</button></div>';return h+'</div>'}
   var i=x.it,w=cleanCopy(i.why||i.w||"");
+  var nr=newRecs(i);if(nr.length)h+='<div class="tfull"><b>New since you checked</b></div>'+nr.map(function(r){return '<blockquote>'+e(r.t)+'</blockquote>'}).join('')+'<div class="sm">Before that: '+e(cleanCopy(i.who))+'</div>';
+  if(i.more&&i.more.length)h+=i.more.map(function(m){return '<div class="tfull">Also: '+e(cleanCopy(m))+'</div>'}).join('');
   if(i.q)h+='<blockquote>'+e(i.q)+'</blockquote>';if(w)h+='<div class="tfull">'+e(w)+'</div>';
   var since=i.since?fmtDate(i.since):"";if(since||i.age)h+='<div class="sm">'+(since?'Since '+e(since):e(i.age||""))+'</div>';
   var ls=(i.l||[]).slice(1);if(ls.length)h+='<div class="links">'+ls.map(function(a){var u=safe(a[1]);return u?'<a href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(a[2])+'</a>':''}).join('')+'</div>';
