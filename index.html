@@ -241,6 +241,19 @@ html.lb{--bg:#050608;--raise:#12141A;--raise2:#1C2029;--line:#232832;--ink:#FFFF
 .lb ::placeholder{color:var(--ink2);opacity:1}.lb .tchk::before{border-color:#6B7385}
 .lb .fullb{display:inline-flex;align-items:center;margin:10px 0 0;padding:0 16px;min-height:40px;border:1px solid #343A46;border-radius:999px;color:var(--ink);font-size:14px;font-weight:500}
 .dnums em{font-style:normal;color:var(--dist);font-size:13px}
+.lb .backb{margin-bottom:10px}
+.lb .stamp{background:var(--raise);border-radius:16px;padding:14px 18px;font-size:13.5px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.lb .stamp:hover,.lb .stamp:active{-webkit-line-clamp:unset}
+.lb .page>h2{margin:18px 0 0;font-size:16px;display:block}
+.lb li.item{padding:14px 16px}.lb li.item>.row:first-of-type{padding-right:96px;min-height:40px;align-items:center}.lb .b-done{top:10px;right:10px}.lb .b-pin,.lb .b-star{top:10px;right:56px}
+.lb li.item.trow{padding:0}.lb li.item.trow>.row:first-of-type{padding-right:0}
+.lb li.item.crit{box-shadow:inset 0 0 0 1px rgba(255,226,61,.55)}.lb li.item.crit.trow{box-shadow:none}
+.lb .who{font-weight:500}.lb .what{font-size:14.5px;line-height:1.45}
+.lb .counts{gap:10px}.lb .count{padding:12px 16px}.lb .count b{font-weight:500}
+.lb .s-remind .dlog{min-height:46px}.lb .s-remind .rwhat{margin:0;font-size:15px;color:var(--ink2)}.lb .s-remind .rwhat b{color:var(--ink);font-weight:500}
+.lb #sdraft{min-height:200px;line-height:1.5}
+.lb .sect li.idea,.lb .sect li.mline{background:var(--raise2)}.lb .twin{gap:14px}.lb .ihead{font-size:12.5px}
+.lb .wv{height:36px}
+.lb #unhide{border-radius:999px!important;border:1px solid #343A46!important;background:none!important;color:var(--ink)!important;min-height:40px;padding:0 16px!important}
 @media (max-width:699px){.lb .g-band{order:0}.rings{grid-template-columns:1fr 1fr;gap:10px}.rtile{flex-direction:column;align-items:flex-start;padding:14px;gap:8px}.ring{width:56px;height:56px}.rv2 b{font-size:28px}.rv2 span{margin-top:2px;font-size:14px}}
 @media (min-width:700px){.rings{grid-template-columns:1fr 1fr}}
 @media (min-width:1100px){
@@ -656,7 +669,7 @@ function dayHTML(k,today,L){
   var w=workDay(k),n=lsGet(NIGHTS,{})[k],st=[];
   if(w){st.push('Working <b>'+hm(w[0])+'</b>');
     if(w[4]!==null&&w[4]!==undefined)st.push(w[4]+(w[4]===1?' athlete':' athletes'))}
-  var ns=nightScore(k,n);if(ns.l)st.push('Lights Out <b>'+e(ns.l)+'</b> at '+e(ns.late||(n&&n.t)||""));
+  var ns=nightScore(k,n);if(ns.l)st.push('Lights Out <b>'+e(lvT(ns.l))+'</b> at '+e(ns.late||(n&&n.t)||""));
   if(st.length)h+='<div class="dstats">'+st.join(' &middot; ')+'</div>';
   if(w)h+=breakdownHTML(k,w);
   h+=doneHTML(k);
@@ -861,7 +874,7 @@ function listSeen(txt){var key=sheetKey();if(LISTSHOWN.key!==key)LISTSHOWN={key:
 function listSave(mark){   // what is on the list stays open for that day. Only a line he was shown and then removed closes
   var ta=$("sdraft");if(!ta)return;var E=ex(),day=dk(listDay()),now=Date.now(),has={};E.listopen=E.listopen||{};E.listclear=E.listclear||{};
   ta.value.split("\n").forEach(function(x){var t=lText(x);if(lHead(t)||lSkip(t))return;var k=lkey(t);has[k]=1;var old=E.listopen[k];E.listopen[k]={t:t,from:day,at:old&&old.from===day?old.at:now,ts:now}});
-  listSeen(ta.value);Object.keys(LISTSHOWN.keys).forEach(function(k){if(!has[k])E.listclear[k]={x:now,ts:now}});
+  listSeen(ta.value);Object.keys(LISTSHOWN.keys).forEach(function(k){if(!has[k])E.listclear[k]={x:now,ts:now,rm:1}});
   if(mark){E.listdone=E.listdone||{};E.listdone[dk(listEve())]=now}exSave(E)}
 function listCalls(L){return !!(L.calls&&L.at&&Date.now()/1000-L.at<21600)}   // 6 hours: older means the Mac was asleep
 function listCardOn(){var hr=new Date().getHours(),wd=listDay().getDay();return LISTOPEN||((hr>=21||hr<4)&&wd!==0&&wd!==6&&!listDone()&&!listPosted(dk(listDay())))}
@@ -885,8 +898,8 @@ function listCardHTML(){   // always on the page (CJ, Nov 8: "i want everything 
   var auto=(hr>=21||hr<4)&&listDay().getDay()!==0&&listDay().getDay()!==6&&!listDone();
   return '<section class="sect s-remind" id="tlist"><h2 class="ttl">'+(listMorning()?'Today':'Tomorrow')+'\'s list'+(LISTOPEN&&!auto?' <button class="ib" id="lclose">Close</button>':'')+'</h2>'+sheetHTML(1)+'</section>'}
 function sheetHTML(noTitle){
-  var saved=lsGet(sheetKey(),""),txt=saved||draftNight(),sd=seasonData(),L=(sd&&sd.list)||{},fresh=listCalls(L)?(L.calls[dk(listDay())]||[]):[],op=listOpen(dk(listDay())),gone=saved?fresh.concat(op.map(function(m){return m.t})).filter(function(c){return !saved.split("\n").some(function(x){return lkey(lText(x))===lkey(c)})}):[];listSeen(txt);
-  return '<div class="day">'+(noTitle?'':'<div class="dtitle dsub">Tomorrow\'s list for the team</div>')+(op.length||LISTUNDO?'<div class="sm">Still open. Tap what got finished.</div><div class="iact">'+op.map(function(m){return '<button class="ib" data-lclr="'+e(m.k)+'">'+e(m.t)+'</button>'}).join('')+(LISTUNDO?'<button class="ib" id="lundo">Undo: '+e(LISTUNDO.t)+'</button>':'')+'</div>':'')+(gone.length?'<div class="sm">Not in your draft yet: '+e(gone.join(', '))+'</div>':'')+'<textarea id="sdraft" class="inew dlog" style="height:'+(txt.split("\n").length*1.5+1.5)+'em">'+e(txt)+'</textarea>'
+  var saved=lsGet(sheetKey(),""),txt=saved||draftNight(),sd=seasonData(),L=(sd&&sd.list)||{},fresh=listCalls(L)?(L.calls[dk(listDay())]||[]):[],op=listOpen(dk(listDay())),gone=saved?fresh.concat(op.filter(function(m){return !lHead(m.t)}).map(function(m){return m.t})).filter(function(c){return !saved.split("\n").some(function(x){return lkey(lText(x))===lkey(c)})}):[];listSeen(txt);
+  return '<div class="day">'+(noTitle?'':'<div class="dtitle dsub">Tomorrow\'s list for the team</div>')+(op.length||LISTUNDO?'<div class="sm">Still open. Tap what got finished.</div><div class="iact">'+op.filter(function(m){return !lHead(m.t)}).map(function(m){return '<button class="ib" data-lclr="'+e(m.k)+'">'+e(m.t)+'</button>'}).join('')+(LISTUNDO?'<button class="ib" id="lundo">Undo: '+e(LISTUNDO.t)+'</button>':'')+'</div>':'')+(gone.length?'<div class="sm">Not in your draft yet: '+e(gone.join(', '))+'</div>':'')+'<textarea id="sdraft" class="inew dlog" style="height:'+(txt.split("\n").length*1.5+1.5)+'em">'+e(txt)+'</textarea>'
    +'<div class="iact"><button class="ib go" id="scopy">'+(SHEETMSG||'Copy')+'</button><a class="ib" href="https://wodprep.slack.com/archives/C089C0WLFGQ" target="_blank" rel="noopener noreferrer">Open #1-daily-to-do</a><button class="ib" id="sredo">Start over</button><button class="ib" id="sdone">List done</button></div></div>'}
 function topNow(){   // Needs you now after dedupe + ranking; null until the feed is in
   if(!FEED)return null;
@@ -1262,10 +1275,10 @@ function challengeHTML(){
   return h}
 /* ---------- capture ---------- */
 function captureHTML(titled){var kb=window.matchMedia&&window.matchMedia("(hover:hover)").matches;
-  return '<section class="sect s-idea g-idea">'+(titled?'<h2 class="ttl">Ideas and to-dos</h2>':'')+'<textarea id="inew" class="inew" placeholder="Idea, to-do or programming note"></textarea><div class="iact"><button class="ib ton" id="iadd">Idea</button><button class="ib ton" id="itodo">To-do</button><button class="ib ton" id="iprog">Programming</button>'+(kb?'<span class="sm">Enter = idea &middot; &#8984; Enter = to-do</span>':'')+'</div></section>'}
+  return '<section class="sect s-idea g-idea">'+(titled?'<h2 class="ttl">Ideas and to-dos</h2>':'')+'<textarea id="inew" class="inew" placeholder="Idea, to-do or programming note"></textarea><div class="iact"><button class="ib ton" id="iadd">Idea</button><button class="ib ton" id="itodo">To-do</button><button class="ib ton" id="iprog">Programming</button>'+(kb?'<span class="sm">Enter saves an idea. &#8984; Enter saves a to-do.</span>':'')+'</div></section>'}
 var TOASTT=null;function toast(m){var t=$("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";document.body.appendChild(t)}t.textContent=m;t.hidden=false;if(TOASTT)clearTimeout(TOASTT);TOASTT=setTimeout(function(){t.hidden=true},2400)}
 /* ---------- pages ---------- */
-function shell(body){var dr=snapDrafts();var pv=PREVIEW?'<div class="pv">Preview: nothing saves</div>':'';$("app").innerHTML=(lane==="health"?'':pv)+tabsHTML()+(lane==="health"?'':body);restoreDrafts(dr);FLASHID=null;showHealth(lane==="health")}
+function shell(body){var dr=snapDrafts();var pv=PREVIEW?'<div class="pv">Preview: nothing saves</div>':'';$("app").innerHTML=(lane==="health"?'':pv)+tabsHTML()+(lane==="health"?'':body);restoreDrafts(dr);FLASHID=null;showHealth(lane==="health");var sdx=$("sdraft");if(sdx){sdx.style.height="auto";sdx.style.height=(sdx.scrollHeight+6)+"px"}}
 window.hqLogFor=function(k,v,replace){var L=logState(),id="log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   if(replace)Object.keys(L.entries).forEach(function(x){var y=L.entries[x];if(y.date===k&&!y.deleted){y.deleted=1;y.ts=Date.now()}});
   L.entries[id]={date:k,text:v,minutes:null,ts:Date.now()};LGEN++;lsSet(LOG,L);lsSet("cc-log-dirty",1);toast("Logged. It goes to CircleFit.");logSync();return true};
@@ -1334,7 +1347,7 @@ function weekRows(sel,today,L,mon){
     });
   return h+'</div>'+dayHTML(sel,today,L)}
 function goalHTML(){
-  var nm=nextMonday(),b=boss(nm),h='<section class="sect s-goal"><h2 class="ttl">10 left by Sat night<em>all 6 tracks live too</em></h2>';
+  var nm=nextMonday(),b=boss(nm),h='<section class="sect s-goal"><h2 class="ttl">'+(LB?'Athletes left for next week<em>Goal: 10 or fewer by Saturday night, all 6 tracks live</em>':'10 left by Sat night<em>all 6 tracks live too</em>')+'</h2>';
   if(!b)return h+'<div class="note">No data yet.</div></section>';
   h+='<div class="brk">'+bossRow(nm,'This weekend');
   var wl=addDays(nm,-7);while(wl>="2026-10-26"){var mm=parseDay(wl);h+=bossRow(wl,'For the week of '+MON[mm.getMonth()]+' '+mm.getDate());wl=addDays(wl,-7)}
@@ -1424,7 +1437,7 @@ function dayList(){ // today's list as he posted it in #1-daily-to-do (CJ, Nov 1
   if(!P.some(function(p){return p.day===day}))day=dk(eveDate());   // at night the posted list is tomorrow's; in the day it is today's
   P.forEach(function(p){if(p.day===day)post=p});if(!post)return null;
   var t0=parseDay(day).getTime()-6*36e5;   // a tick after 6pm the evening before counts for this list
-  return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k];return !x[1]&&!lSkip(x[0])&&!lHead(x[0])&&!(c&&c.x&&c.x>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work",day:day}})}
+  return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k],back=c&&c.x===0&&(c.ts||0)>t0;return (!x[1]||back)&&!lSkip(x[0])&&!lHead(x[0])&&!(tickX(clear,k)>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work",day:day}})}
 function tText(x){if(x.daily)return x.t;if(x.m)return String(x.m.who||"");var i=x.it,nr=newRecs(i),t=heroTitle(i),n=(i.more||[]).length;if(nr.length)return "New from "+String(i.pname||"them").split(" ")[0]+": "+nr[0].t;return (n?"("+(n+1)+") ":"")+t}
 function tAct(x){if(x.m)return "";var l=(x.it.l||[])[0],u=l&&safe(l[1]);if(!u)return "";var lab=String(l[2]||"Open").split(/ [-:(]|, /)[0];if(lab.length>16)lab="Open";
   return '<a class="tgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(lab)+'</a>'}
@@ -1454,13 +1467,16 @@ function tList(L,name,show){ // plain ranked checklist (CJ, Nov 10: Now/Today/La
   h+='<ul class="tl">'+vis.map(function(x,i){return tRow(x,i===0&&name==="Work")}).join('')+'</ul>';
   if(all.length>show)h+='<button class="tb tlater" data-tl="'+name+'">'+(ok?'Show less':(all.length-show)+' more')+'</button>';
   return h}
+// A tick is one line at one moment. Several lines cleared in the same millisecond is the list editor dropping
+// them, which never meant "finished" (Nov 10 2026: "CircleFit: write WP 30" vanished from his list that way).
+function tickX(clear,k){var c=clear[k];if(!c||!c.x||c.rm)return 0;var n=0;for(var j in clear)if(clear[j]&&clear[j].x===c.x)n++;return n>1?0:c.x}
 function dayDone(){   // the lines on the same posted list that are finished: struck in Slack, or ticked here
   var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[],day=dk(listDay()),clear=ex().listclear||{},post=null;
   if(!P.some(function(p){return p.day===day}))day=dk(eveDate());
   P.forEach(function(p){if(p.day===day)post=p});if(!post)return [];
   var t0=parseDay(day).getTime()-6*36e5;
-  return post.lines.filter(function(x){if(lSkip(x[0])||lHead(x[0]))return false;var c=clear[lkey(x[0])];return x[1]||(c&&c.x&&c.x>t0)}).map(function(x){return {k:lkey(x[0]),t:x[0],slack:!!x[1]}})}
-function doneRow(x){return '<li class="trow done"><div class="tline">'+(x.slack?'<span class="tchk on" title="Crossed off in Slack">&#10003;</span>':'<button class="tchk on" data-lunclr="'+e(x.k)+'" aria-label="Not done, put it back">&#10003;</button>')+'<span class="ttext">'+e(x.t)+'</span></div></li>'}
+  return post.lines.filter(function(x){if(lSkip(x[0])||lHead(x[0]))return false;var k=lkey(x[0]),c=clear[k],back=c&&c.x===0&&(c.ts||0)>t0;return (x[1]&&!back)||tickX(clear,k)>t0}).map(function(x){var k=lkey(x[0]);return {k:k,t:x[0],mine:tickX(clear,k)>t0}})}
+function doneRow(x){return '<li class="trow done"><div class="tline">'+(!x.mine?'<span class="tchk on" title="Crossed off in Slack">&#10003;</span>':'<button class="tchk on" data-lunclr="'+e(x.k)+'" aria-label="Not done, put it back">&#10003;</button>')+'<span class="ttext">'+e(x.t)+'</span></div></li>'}
 function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
   var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
   if(won&&!OPEN.wonlist)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
@@ -1487,7 +1503,7 @@ function draw(){
   if(lane==="week"){drawWeek();return}
   if(lane==="health"){drawHealth();return}
   if(lane==="panel"){drawPanel();return}
-  var h=(PREVIEW?'<div class="pv">Preview: nothing saves</div>':'')+tabsHTML()+'<div class="page"><div class="head"><h1>Full board</h1></div>';
+  var h=(PREVIEW?'<div class="pv">Preview: nothing saves</div>':'')+tabsHTML()+'<div class="page"><div class="head">'+(LB?'<button class="ib backb" data-lane="hq">&lsaquo; Today</button>':'')+'<h1>Full board</h1></div>';
   if(busy)h+='<div class="note">Loading&hellip;</div>';
   if(err)h+='<div class="err">'+e(err)+'</div>';
   if(FEED){
