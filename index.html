@@ -224,10 +224,26 @@ html.lb{--bg:#050608;--raise:#12141A;--raise2:#1C2029;--line:#232832;--ink:#FFFF
 .lb h2{font-size:16px;font-weight:500}
 .lb .grid3,.lb .sect,.lb .rings,.lb .rtile,.lb .tl,.lb li.trow,.lb .tline{min-width:0;max-width:100%}.lb .page{overflow-x:clip}
 .lb #tlist{outline:0;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:14px 22px}.lb #tlist .ttl{flex:none}
+.lb .page>.g-chal,.lb .page>.s-goal{order:0}.lb .page>.sys{order:9}
+.lb .tsub .b-more{min-height:40px;padding:0 8px}.lb .links a,.lb .links span{min-height:40px;display:inline-flex;align-items:center}.lb .b-done,.lb .b-pin,.lb .b-star{width:40px;height:40px}.lb .b-pin,.lb .b-star{right:54px}
+.lb .dact button,.lb .lf,.lb .tag,.lb .ib.st{min-height:40px}.lb .tag{padding:0 12px}
+.lb .wr.sel{outline:1.5px solid var(--work);outline-offset:-1.5px;background:var(--raise2)}.lb .wr.today{outline:0}.lb .wr.today .wd{color:var(--work)}
+.lb .blist{display:flex;flex-wrap:wrap;gap:6px}.lb .blist .lf{width:auto;margin:0}
+.lb .dtitle,.lb .s-goal .ttl{color:var(--ink)}.lb .dact,.lb .dent{border-left:0;padding-left:0}
+.lb #tlist .day{padding:0;background:none}.lb .day .iact .ib{border-radius:14px;padding:8px 14px;text-align:left;min-height:40px}
+.lb .toast{left:16px;right:16px;transform:none;margin:0 auto;width:fit-content;max-width:calc(100% - 32px);border-radius:16px;text-align:center}
+.lb .hr.now{border-radius:0}.lb .hr i:first-of-type{border-radius:5px 5px 0 0}.lb .ghost{border-radius:5px 5px 0 0;border-color:var(--mute)}
+.lb .s-disc .bignum b{color:var(--ink)}
+.lb .gate h1{font-weight:500}.lb .gate button{background:var(--work);color:#04130D;border-radius:999px;min-height:46px;font-weight:600}.lb .gate input:focus{outline:2px solid var(--work)}
+.lb .iedit{min-height:120px}.lb .ifind{width:100%;max-width:320px}
+.lb ::placeholder{color:var(--ink2);opacity:1}.lb .tchk::before{border-color:#6B7385}
+.lb .fullb{display:inline-flex;align-items:center;margin:10px 0 0;padding:0 16px;min-height:40px;border:1px solid #343A46;border-radius:999px;color:var(--ink);font-size:14px;font-weight:500}
+.dnums em{font-style:normal;color:var(--dist);font-size:13px}
+@media (max-width:699px){.lb .g-band{order:0}.rings{grid-template-columns:1fr 1fr;gap:10px}.rtile{flex-direction:column;align-items:flex-start;padding:14px;gap:8px}.ring{width:56px;height:56px}.rv2 b{font-size:28px}.rv2 span{margin-top:2px;font-size:14px}}
 @media (min-width:700px){.rings{grid-template-columns:1fr 1fr}}
 @media (min-width:1100px){
 .lb .page{max-width:1480px;padding-inline:36px}.lb .tabs{padding-left:30px}
-.lb .kick{font-size:15px;font-weight:400;color:var(--ink2)}.lb .head h1{font-size:40px}.lb .ttl{font-size:16px}.lb .hours{height:120px}.lb .bignum b{font-size:46px}
+.lb .kick{font-size:15px;font-weight:400;color:var(--ink2)}.lb .head h1{font-size:40px}.lb .ttl{font-size:16px}.lb .hours{height:120px}.lb .bignum b{font-size:46px}.lb .g-lights,.lb .g-disc{align-self:stretch}
 .lb .grid3{gap:14px;grid-template-rows:auto auto auto auto 1fr;grid-template-areas:
  "next next next next next band band band band band band band"
  "next next next next next time time time time time time time"
@@ -1273,23 +1289,24 @@ function logReminder(skip){
   LGEN++;lsSet(LOG,L);lsSet("cc-log-dirty",1);if(ta)ta.value="";toast(skip?"Done":"Logged. It goes to CircleFit.");draw();logSync()}
 /* ---------- look B pieces: two rings, the day's numbers, one line of score ---------- */
 var DAYJOB={1:"CircleFit and skeletons",2:"GPP athletes and WPA",3:"Notifications to zero",4:"CrossFit athletes",5:"Finish the athletes",6:"Off",0:"Last athletes, done by 10"};
-function ringSVG(p){p=Math.max(0,Math.min(100,Math.round(p)));return '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="rt" cx="20" cy="20" r="17"/><circle class="rv" cx="20" cy="20" r="17" pathLength="100" stroke-dasharray="'+p+' 100"/></svg>'}
+function ringSVG(p){p=Math.max(0,Math.min(100,Math.round(p)));return '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle class="rt" cx="20" cy="20" r="17"/>'+(p>0?'<circle class="rv" cx="20" cy="20" r="17" pathLength="100" stroke-dasharray="'+p+' 100"/>':'')+'</svg>'}
 function dayCount(){var sd=seasonData(),P=(sd&&sd.list&&sd.list.posted)||[],day=dk(listDay());if(!P.some(function(p){return p.day===day}))day=dk(eveDate());
   var post=null;P.forEach(function(p){if(p.day===day)post=p});if(!post)return null;
   var all=post.lines.filter(function(x){return !lSkip(x[0])&&!lHead(x[0])}).length,DL=dayList()||[];return {total:all,left:Math.min(all,DL.length),day:day}}
-function ringsHTML(){
-  var ed=eveDate(),job=DAYJOB[ed.getDay()]||"",dc=dayCount(),b=boss(nextMonday()),h='<div class="rings g-band">';
-  if(dc&&dc.total){var done=dc.total-dc.left;
-    h+='<button class="rtile" data-go="next" style="--c:var(--work)">'+ringSVG(done/dc.total*100)+'<div class="rv2"><b>'+done+'<sub>/'+dc.total+'</sub></b><span>'+(dc.day===dk(ed)?'Today':'Tomorrow')+'\'s list done</span><small>'+e(DAYS[ed.getDay()]+': '+job)+'</small></div></button>'}
-  else h+='<button class="rtile" data-go="next" style="--c:var(--work)">'+ringSVG(0)+'<div class="rv2"><b>--</b><span>No list posted for today</span><small>'+e(DAYS[ed.getDay()]+': '+job)+'</small></div></button>';
-  if(b&&b.w&&b.w.roster){var left=b.n,ro=b.w.roster;
-    h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG((ro-left)/ro*100)+'<div class="rv2"><b>'+left+'<sub>/'+ro+'</sub></b><span>Athletes left for next week</span><small>'+(left<=10?'At 10 or fewer. The week is won.':'Goal: 10 or fewer by Saturday night')+'</small></div></button>'}
-  else h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG(0)+'<div class="rv2"><b>--</b><span>Athletes left for next week</span><small>No count yet</small></div></button>';
+function ringsHTML(){   // both rings: the big number is what is LEFT, the ring fills as it gets done
+  var ed=eveDate(),dc=dayCount(),b=boss(nextMonday()),h='<div class="rings g-band">';
+  if(dc&&dc.total){var done=dc.total-dc.left,wd=dc.day===dk(ed)?'today':'tomorrow';
+    h+='<button class="rtile" data-go="next" style="--c:var(--work)">'+ringSVG(done/dc.total*100)+'<div class="rv2"><b>'+dc.left+'</b><span>'+(dc.left?'left on '+wd+'\'s list':wd.charAt(0).toUpperCase()+wd.slice(1)+'\'s list is done')+'</span><small>'+done+' of '+dc.total+' done</small></div></button>'}
+  else h+='<button class="rtile" data-go="next" style="--c:var(--work)">'+ringSVG(0)+'<div class="rv2"><span>No list posted for today</span><small>Post it in Slack and it shows here</small></div></button>';
+  if(b&&b.w&&b.w.roster){var left=Math.max(0,b.n),ro=b.w.roster,goal=Math.max(1,ro-10),tr=b.tracksOK;
+    h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG((ro-left)/goal*100)+'<div class="rv2"><b>'+left+'</b><span>athletes left for next week</span><small>'+(left<=10?(tr?'At 10 or fewer and all tracks live':'At 10 or fewer. Tracks '+(b.w.tracks||0)+' of '+TRACKS_NEEDED+' live'):'Goal: 10 or fewer by Saturday night')+'</small></div></button>'}
+  else h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG(0)+'<div class="rv2"><span>Athletes left for next week</span><small>No data yet</small></div></button>';
   return h+'</div>'}
-function dayNumsHTML(k){var w=workDay(k)||[];return '<div class="dnums">Worked<b>'+(w.length?fmtHM(w[0]):'--')+'</b>Distracted<b>'+(w.length?fmtHM(w[3]||0):'--')+'</b></div>'}
+function dayNumsHTML(k){var w=workDay(k)||[],hb=GLANCE&&GLANCE.last_heartbeat?(Date.now()-new Date(GLANCE.last_heartbeat).getTime())/60000:0;
+  return '<div class="dnums">Worked<b>'+(w.length?fmtHM(w[0]):'--')+'</b>Distracted<b>'+(w.length?fmtHM(w[3]||0):'--')+'</b>'+(hb>30?'<em>As of '+new Date(GLANCE.last_heartbeat).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+'</em>':'')+'</div>'}
 function weekLineHTML(){var today=dk(eveDate());if(today<S_START||today>S_END)return '';
   var wk=Math.floor((parseDay(today).getTime()-parseDay(S_START).getTime())/(7*86400000))+1;
-  return '<button class="weekline g-wline" data-lane="week">6-week challenge <b>week '+wk+' of 6</b><span>Full score on Week</span></button>'}
+  return '<button class="weekline g-wline" data-lane="week">6-week challenge <b>week '+wk+' of 6</b><span>Open the challenge</span></button>'}
 function drawToday(panel){
   var ed=eveDate(),k=dk(ed),n=lsGet(NIGHTS,{})[k],H=headline(),won=!!n,ae=document.activeElement,foc=(ae&&ae.id==="inew")||(QUICK&&!MEDIT&&(!ae||ae===document.body));
   var h='<div class="page'+(won?' won':'')+'">';
@@ -1439,7 +1456,7 @@ function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=t
   var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
   if(won&&!OPEN.wonlist)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
   var DL=dayList();if(DL){h+='<div class="tsub"><span>'+(DL.length&&DL[0].day!==dk(eveDate())?'Tomorrow':'Today')+'\'s list</span><em>'+DL.length+' left <button class="b-more" id="lopen">edit</button></em></div>'+(DL.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+'</ul>':'<div class="note">All done.</div>')}
-  return h+tList(T.work,DL?"Also waiting":"Work",DL?(LB?6:3):(LB?8:6))+tList(T.pers,"Personal",3)+'<button class="tb tlater" data-lane="todo">Full board</button></section>'}
+  return h+tList(T.work,DL?(LB?"Everything else":"Also waiting"):"Work",DL?(LB?6:3):(LB?8:6))+tList(T.pers,"Personal",3)+'<button class="tb tlater fullb" data-lane="todo">Full board</button></section>'}
 function draw(){
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){
