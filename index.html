@@ -233,13 +233,10 @@ function flagsFor(it){return flags()[keyOf(it)]||{}}
 // dated event than the one cleared). Reworded summaries never resurface it.
 function isDone(it){var f=flagsFor(it);
  if(!f.done)return false;
- var t=f.ts||0;
- if(Date.now()-t<7*86400000)return true;   // a tick hides it for a week, whatever the sweep writes (Nov 10 2026: Dawn came back daily because the text named a new date)
  if(!f.at)return true;
  var cur=it.latest||it.since||"";
  if(!cur)return true;
- var td=t?new Date(t-new Date(t).getTimezoneOffset()*60000).toISOString().slice(0,10):"";
- return cur<=(f.at>td?f.at:td);            // after that, only something dated after the tick brings it back
+ return cur<=f.at;
 }
 // One-time migration of pre-Oct-30 fp()-keyed flags onto the server key `k`.
 function pruneFlags(){
@@ -1485,7 +1482,7 @@ document.addEventListener("click",function(ev){
     if(!src){var lg=liveGaps();if(lg&&lg.item&&keyOf(lg.item)===k)src=lg.item}
     if(!src)return;
     var cur=flagsFor(src);
-    setFlag(k,t.dataset.a,t.dataset.a==="done"?!isDone(src):!cur[t.dataset.a],src);draw();return}
+    setFlag(k,t.dataset.a,t.dataset.a==="done"?true:!cur[t.dataset.a],src);draw();return}   // a tick is always a tick: a stale screen used to turn a second tap into an untick
 });
 window.addEventListener("hashchange",function(){
   var l=location.hash.slice(1);
