@@ -233,10 +233,13 @@ function flagsFor(it){return flags()[keyOf(it)]||{}}
 // dated event than the one cleared). Reworded summaries never resurface it.
 function isDone(it){var f=flagsFor(it);
  if(!f.done)return false;
+ var t=f.ts||0;
+ if(Date.now()-t<7*86400000)return true;   // a tick hides it for a week, whatever the sweep writes (Nov 10 2026: Dawn came back daily because the text named a new date)
  if(!f.at)return true;
  var cur=it.latest||it.since||"";
  if(!cur)return true;
- return cur<=f.at;
+ var td=t?new Date(t-new Date(t).getTimezoneOffset()*60000).toISOString().slice(0,10):"";
+ return cur<=(f.at>td?f.at:td);            // after that, only something dated after the tick brings it back
 }
 // One-time migration of pre-Oct-30 fp()-keyed flags onto the server key `k`.
 function pruneFlags(){
