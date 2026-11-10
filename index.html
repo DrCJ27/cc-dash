@@ -995,7 +995,7 @@ function fmtLeft(m){var h=Math.floor(m/60),n=m%60;return (h?h+" hr ":"")+(n||!h?
 function cleanCopy(t){return String(t||"").replace(/\s*\(see Needs you now\)/ig,"").replace(/\s+--\s+/g,". ").replace(/\s*\(\d+d\)/g,"").trim()}
 var MEDICAL=/\b(pain|nerve|hurts?|hurt|tingl\w*|injur\w*|numb\w*|knee|shoulder|back|elbow|surg\w*|post-op|arm|tendon\w*|patella|hip|neck|glute|ankle|wrist|foot|toe|headache|concuss\w*|doctor|hr under)\b/i;
 function personOf(i){var m=String(i.who||"").match(/^([A-Z][\w'-]+(?: [A-Z][\w'-]+)?)/);return m?m[1]:""}
-function heroTitle(i){var w=cleanCopy(i.who).replace(/\s+/g," ");if(MEDICAL.test(w)){var p=personOf(i);return p?"Reply to "+p:"Open this one"}return w}
+function heroTitle(i){var w=cleanCopy(i.who).replace(/\s+/g," ");return w}   // rows show the real sentence (CJ, Nov 10 2026: "its fine to share")
 function fmtHM(m){return hm(m).replace(' 0m','')}
 function nextMonday(){var ed=eveDate(),t=dk(ed);return addDays(t,((8-ed.getDay())%7)||7)}
 function pace(){ // what the coming weekend needs, in one line
@@ -1173,7 +1173,7 @@ window.hqLogFor=function(k,v,replace){var L=logState(),id="log-"+Date.now().toSt
 window.hqLogWords=function(k){return dayEntries(logState(),k).map(function(r){return r.e.text}).join(" / ")};
 function unlogged(){      // watch sessions with nothing written. Stays until he writes something or says nothing to add
   var L=logState(),today=dk(eveDate()),out=[],c=LOG_START,cut=logCut();if(c<cut)c=cut;
-  while(c<=today){var g=L.garmin[c],acts=((g&&g.acts)||[]).filter(function(a){return (a.min||0)>=15});
+  while(c<=today){var g=L.garmin[c],acts=((g&&g.acts)||[]).filter(function(a){return (a.min||0)>0});   // any watch session prompts (CJ, Nov 10 2026)
     var any=Object.keys(L.entries).some(function(id){var x=L.entries[id];return x.date===c&&!x.deleted});
     if(acts.length&&!any)out.push({k:c,acts:acts});
     c=addDays(c,1)}
