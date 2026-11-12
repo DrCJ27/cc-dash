@@ -93,7 +93,7 @@ h2.tog{cursor:pointer;margin:0;justify-content:flex-start;gap:8px}h2.tog em{marg
 h2{font-weight:800;font-size:26px;margin:6px 0 2px;text-transform:uppercase}h2 em{font:500 13px Archivo,sans-serif;font-style:normal;text-transform:none;color:var(--mute)}
 .gate{max-width:420px;margin:14vh auto;padding:0 20px;display:flex;flex-direction:column;gap:12px}.gate h1{font-size:44px;margin:0}.gate input{background:var(--raise);border:1px solid var(--line);color:var(--ink);padding:12px;font:inherit}.gate button{background:var(--ink);color:#090B10;border:0;padding:12px;font-weight:700}
 .counts{display:flex;flex-wrap:wrap;gap:8px}.count{background:var(--raise);padding:8px 10px}.count b{display:block;font-size:22px}.stamp{font-size:13px;color:var(--mute)}
-#hw{position:fixed;left:0;right:0;bottom:0;top:calc(49px + env(safe-area-inset-top,0px));z-index:10;background:var(--bg)}#hw.away{visibility:hidden;left:-300vw;right:300vw}#hw iframe{width:100%;height:100%;border:0;display:block}
+#hw{position:fixed;left:0;right:0;bottom:0;top:calc(49px + 56px + env(safe-area-inset-top,0px));z-index:10;background:var(--bg)}#hw.away{visibility:hidden;left:-300vw;right:300vw}#hw iframe{width:100%;height:100%;border:0;display:block}
 .wonmsg{font-size:15px;color:var(--ink2)}
 
 /* ---------- review pass: status color, real hierarchy, forms that differ ---------- */
@@ -241,7 +241,16 @@ html.lb{--bg:#050608;--raise:#12141A;--raise2:#1C2029;--line:#232832;--ink:#FFFF
 .lb ::placeholder{color:var(--ink2);opacity:1}.lb .tchk::before{border-color:#6B7385}
 .lb .fullb{display:inline-flex;align-items:center;margin:10px 0 0;padding:0 16px;min-height:40px;border:1px solid #343A46;border-radius:999px;color:var(--ink);font-size:14px;font-weight:500}
 .dnums em{font-style:normal;color:var(--dist);font-size:13px}
-.lb #hw{top:calc(56px + env(safe-area-inset-top,0px))}
+.lb #hw{top:calc(56px + 56px + env(safe-area-inset-top,0px))}
+html{scroll-padding-top:calc(120px + env(safe-area-inset-top,0px))}
+#qwrap{position:fixed;left:0;right:0;top:calc(49px + env(safe-area-inset-top,0px));z-index:21}.lb #qwrap{top:calc(56px + env(safe-area-inset-top,0px))}#qwrap[hidden]{display:none}
+.qspace{height:56px}
+.qbar{min-height:56px;box-sizing:border-box;display:flex;gap:8px;align-items:center;padding:6px max(14px,env(safe-area-inset-right,0px)) 6px max(14px,env(safe-area-inset-left,0px));background:var(--bg)}
+.qbar .qin{flex:1;min-height:44px;height:44px;max-height:96px;resize:none;margin:0;line-height:20px;overflow-y:auto}
+.lb .qbar .qin{padding:12px 16px}
+.qbar .qadd{flex:none;width:44px;height:44px;border:0;border-radius:999px;background:var(--work);color:var(--bg);font:inherit;font-size:26px;font-weight:600;line-height:1;cursor:pointer}
+.kidea,.kat{font-size:12px;opacity:.75;margin-left:4px}
+.lb .page>h2{top:calc(112px + env(safe-area-inset-top,0px))!important}
 .lb .backb{margin-bottom:10px}
 .lb .stamp{background:var(--raise);border-radius:14px;padding:14px 18px;font-size:14px;line-height:1.5;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.lb .stamp:hover,.lb .stamp:active{-webkit-line-clamp:unset}
 .lb .page>h2{margin:18px 0 0;font-size:16px;display:block}
@@ -292,15 +301,15 @@ html.lb{--bg:#050608;--raise:#12141A;--raise2:#1C2029;--line:#232832;--ink:#FFFF
 </style></head><body><div id="app"></div>
 <script>
 var PREVIEW=false,MEM={};
-var LANES=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"],["todo","Full board"]];
-var TABS=[["hq","Today"],["week","Week"],["ideas","Ideas"],["health","Health"]];
+var LANES=[["hq","Today"],["week","Week"],["health","Health"],["todo","Full board"]];
+var TABS=[["hq","Today"],["week","Week"],["health","Health"]];   // Ideas tab removed Nov 11 2026 (CJ: "I dont like the ideas page at all"): one box, one list
 var LB=true;try{if(location.hash==="#look"){localStorage.setItem("cc-look","b");history.replaceState(null,"","#hq")}else if(location.hash==="#oldlook"){localStorage.setItem("cc-look","old");history.replaceState(null,"","#hq")}LB=localStorage.getItem("cc-look")!=="old"}catch(x){}/* the new look is the default on every device (CJ, Nov 10 2026: "yes") */if(LB)document.documentElement.classList.add("lb");
 var lane=(location.hash||"#hq").slice(1);var HDAY0=null,LISTOPEN=false;if(lane==="list"){lane="hq";LISTOPEN=true}if(/^health-/.test(lane)){HDAY0=lane.slice(7);lane="health"} if(!LANES.some(function(l){return l[0]===lane})&&lane!=="panel")lane="hq";
 function setFav(){}
 var KEYSTORE="cc-pass", FLAGS="cc-flags-", MINE="cc-mine-", IDEAS="cc-ideas", NIGHTS="cc-nights", HQCFG="cc-hq";
 var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
 var OPEN={}, PEND=0, HQ_ALL=0, FOLDS={};   // open folds/cards, redraw deferred while typing, "+N more" expanded
-function typing(){var a=document.activeElement;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
+function typing(){var a=document.activeElement;if(a&&a.id==="inew"&&!a.value.trim())return false;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
 function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
 function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT,_me:MEDIT};["inew","ifind","iedit","medit","dlog","dmin","rlog"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
 function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie"||id==="_le"||id==="_me")return;var x=document.getElementById(id);if(!x)return;if(id==="medit"){if(o._me===MEDIT)x.value=o[id];return}if(id==="dlog"){if(o[id]&&o._le===LEDIT)x.value=o[id];return}if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
@@ -635,8 +644,12 @@ function drawSys(){var s=$("sys");if(s)s.outerHTML=sysHTML();var ds=$("discsync"
 function tabsHTML(){
   var h='<div class="tabs">';
   TABS.forEach(function(l){h+='<button data-lane="'+l[0]+'"'+(l[0]===lane||(l[0]==="hq"&&lane==="panel")?' aria-current="true"':'')+'>'+l[1]+'</button>'});
-  return h+'</div>';
+  return h+'</div><div class="qspace"></div>';
 }
+function ensureBar(on){var b=$("qwrap");
+  if(!on){if(b)b.hidden=true;return}
+  if(!b){b=document.createElement("div");b.id="qwrap";b.innerHTML=captureHTML();document.body.insertBefore(b,$("app"))}
+  b.hidden=false}
 
 /* ---------- THE WEEK: tap a day, see plan against what happened, log what you did ---------- */
 var LOG="cc-log",DAYSEL=null,DAYSET=null,WEEKOFF=0,LEDIT=null,LOGBUSY=null,LOGRETRY=null,LGEN=0,DELASK=null,LOG_START="2026-11-02";
@@ -1097,28 +1110,75 @@ function ideaAct(k,a){
 /* ---------- MENU BAR PANEL (hq/menubar, Nov 4 2026). "Full HQ, Ideas on top." Read-only hooks:
    no secret crosses to the native side, only counts and a clock. ---------- */
 var QUICK=false,FEED_AT=0,LOAD_AT=0,DRAFT="cc-idea-draft";
-function wireCapture(foc){
+function wireCapture(foc){   // Enter, the + button and the draft are handled once, document-wide (any page)
   var ta=$("inew");if(!ta)return;
-  var kb=window.matchMedia&&window.matchMedia("(hover:hover)").matches;
-  if(!ta.value)ta.value=lsGet(DRAFT,"");
-  ta.oninput=function(){lsSet(DRAFT,ta.value)};
-  ta.onkeydown=function(ev){
-    if(ev.key!=="Enter"||ev.shiftKey||ev.isComposing)return;
-    if(ev.metaKey||ev.ctrlKey){ev.preventDefault();addTodo();return}
-    if(!kb)return;                  // phone Return is a new line; the buttons save
-    ev.preventDefault();if(ta.value.trim())panelSave();};
   if(foc){ta.focus();ta.selectionStart=ta.value.length}
 }
+/* Reminder time inside the text: "call Dawn fri 9am", "tomorrow at 3", "at 4:30pm", "in 20 min".
+   A day with no time is a plain to-do. Returns epoch ms or 0. hq/remind.py texts him when it comes due. */
+var WDAYS=["sun","mon","tue","wed","thu","fri","sat"],MONS=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+// Strict on purpose: coaching shorthand ("row 500m at 1:50", "EMOM at 10", "5x3 at 80%") must never become a text.
+// A time counts only with am/pm ("9am", "4:30 pm"), or "at H" with a day word, or "at 7"-"at 12" alone.
+function parseWhen(t,nowD){
+  var s=" "+String(t||"").toLowerCase().replace(/\s+/g," ")+" ",now=nowD||new Date(),m;
+  m=s.match(/\bin (\d{1,3}) ?(min|mins|minutes?|hr|hrs|hours?)\b/);
+  if(m)return now.getTime()+(+m[1])*(/^h/.test(m[2])?3600000:60000);
+  var day=null,dateD=null;
+  m=s.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? (\d{1,2})(?:st|nd|rd|th)?\b/)||null;
+  if(m){var mo=MONS.indexOf(m[1]),dd=+m[2];if(dd>=1&&dd<=31){dateD=new Date(now.getFullYear(),mo,dd);if(dateD<new Date(now.getFullYear(),now.getMonth(),now.getDate()))dateD.setFullYear(now.getFullYear()+1)}}
+  else if(m=s.match(/ (\d{1,2})\/(\d{1,2}) /)){var mo2=+m[1]-1,d2=+m[2];if(mo2>=0&&mo2<12&&d2>=1&&d2<=31){dateD=new Date(now.getFullYear(),mo2,d2);if(dateD<new Date(now.getFullYear(),now.getMonth(),now.getDate()))dateD.setFullYear(now.getFullYear()+1)}}
+  var tonight=/\btonight\b/.test(s);
+  if(/\b(tomorrow|tmrw|tmr|tomorow)\b/.test(s))day=1;else if(tonight||/\btoday\b/.test(s))day=0;
+  else{var wd=s.match(/\b(sun|mon|tue|wed|thu|fri|sat)(?:day|days|s|sday|nesday|rsday|r|rs|urday|t|ues|urs)?\b/);
+    if(wd&&!/\bsat (down|with|in|on|out)\b/.test(s)){var want=WDAYS.indexOf(wd[1]);day=(want-now.getDay()+7)%7;var byWd=true}}
+  var named=day!==null||!!dateD,hh,mi,ap="";
+  var tm=s.match(/(^|[^\w:\/.])(\d{1,2})(?::([0-5]\d))? ?(am|pm|a\.m\.|p\.m\.)(?=\W)/)||s.match(/(^|[^\w:\/.])(\d{1,2})(?::([0-5]\d))?(a|p)(?=\W)/);
+  if(tm){var pre=s.slice(0,tm.index+tm[1].length),post=s.slice(tm.index+tm[0].length);
+    if(/\bthe $/.test(pre)||/^ ?(class|classes|session|group|crew|wod)\b/.test(post))return 0;   // "the 5pm class" is a name, not a reminder
+    hh=+tm[2];mi=+(tm[3]||0);ap=tm[4].charAt(0);if(hh<1||hh>12)return 0;if(ap==="p"&&hh<12)hh+=12;if(ap==="a"&&hh===12)hh=0}
+  else if(/\bnoon\b/.test(s)){hh=12;mi=0;ap="p"}
+  else{tm=s.match(/(?:\bat|@) ?(\d{1,2})(?::([0-5]\d))?(?=[ ,.;!?)]|$)(?! ?(?:k|m|km|mi|mph|min|mins|minutes|sec|secs|seconds|hours?|hrs?|reps?|rounds?|x|lbs?|kg|%|sets?|cals?|pace|split|watts?|rpm|spm|bpm)\b)(?!\/)/);
+    if(!tm)return 0;
+    var post2=s.slice(tm.index+tm[0].length),pre2=s.slice(Math.max(0,tm.index-28),tm.index);if(/^ ?(pace|split|\/)/.test(post2))return 0;
+    if(/\b(emom|e\dmom|amrap|cap|capped|tabata|every|hold|row|run|bike|ski|swim|pace|split|sprint|interval|intervals|tempo|rpe|zone|hr|heart rate|cadence|level|damper|incline|speed)\b/.test(pre2))return 0;   // training talk, not a clock
+    hh=+tm[1];mi=+(tm[2]||0);if(hh<1||hh>12)return 0;
+    if(!named&&!tonight)return 0;   // "at 9" alone is too often a load, a pace or a count: needs am/pm or a day word
+    if(tonight&&hh<12)hh+=12;}
+  if(tonight&&ap!=="a"&&hh<12)hh+=12;
+  var base=dateD||new Date(now.getFullYear(),now.getMonth(),now.getDate()+(day||0));
+  var d=new Date(base.getFullYear(),base.getMonth(),base.getDate(),hh,mi,0,0);
+  if(!ap&&hh<12){var pm=new Date(d.getTime());pm.setHours(hh+12);   // no am/pm: the next one of the two that is still ahead
+    if(hh<7||(d.getTime()<=now.getTime()&&pm.getTime()>now.getTime()))d=pm}
+  if(d.getTime()<=now.getTime()){
+    if(byWd)d.setDate(d.getDate()+7);else if(dateD||day===0)return 0;
+    else              // a time already gone today, or a past date: no text
+    d.setDate(d.getDate()+1)}   // "9am" said at 10am means tomorrow; "fri 9am" said Friday 10am means next Friday (above)           // "9am" said at 10am means tomorrow
+  return d.getTime()}
+function fmtAt(ms){var d=new Date(ms),n=new Date(),t=(d.getHours()%12||12)+(d.getMinutes()?":"+String(d.getMinutes()).padStart(2,"0"):"")+(d.getHours()<12?"am":"pm"),
+  dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(n.getFullYear(),n.getMonth(),n.getDate()))/864e5);
+  return (dd===0?"today ":dd===1?"tomorrow ":dd<7?DAYS[d.getDay()].slice(0,3)+" ":MON[d.getMonth()]+" "+d.getDate()+" ")+t}
 function addTodo(){
   var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
-  var q=QUICK,m=lsGet(MINE+"todo",[]);
-  var sd=guessSide(v);m.push({k:"mine-"+Date.now(),who:v,ts:Date.now(),side:sd});lsSet(MINE+"todo",m);
+  var pm=v.match(/^prog(?:ramming)?\s*[:\-]\s*([\s\S]+)$/i);if(pm){addProg(pm[1]);return}
+  var q=QUICK,m=lsGet(MINE+"todo",[]),at=parseWhen(v),it={k:"mine-"+Date.now(),who:v,ts:Date.now(),side:guessSide(v)};
+  if(at)it.at=at;m.push(it);lsSet(MINE+"todo",m);
   ta.value="";lsDel(DRAFT);
-  queuePush(1);toast(sd==="work"?"Added to Work. Tap it to move it.":"Added to Personal. Tap it to move it.");draw();if(q)nativeClose();
+  var where=it.side==="work"?"Work":"Personal",msg="Added to "+where+(at?". Texts you "+fmtAt(at):"");QMSG={t:msg,until:Date.now()+6000};ta.placeholder=msg;qGrow();setTimeout(function(){var n=$("inew");if(n&&QMSG&&Date.now()>=QMSG.until)n.placeholder="To-do, or call Dawn fri 9am"},6100);
+  queuePush(1);toast(msg);draw();if(q)nativeClose();else if(window.matchMedia&&window.matchMedia("(hover:hover)").matches){var n=$("inew");if(n)n.focus()}
 }
+// An idea filed from the desk (scripts/ideas.py) lands in My list marked as an idea. Same key every
+// device, so two devices migrating at once produce one line, never two.
+function migrateIdeas(){var all=lsGet(IDEAS,[]),m=lsGet(MINE+"todo",[]),have={},ch=false;m.forEach(function(x){have[x.k]=1});
+  var linked={};m.forEach(function(x){if(x.from)linked[x.from]=1});
+  all.forEach(function(i){if(!i||!i.k||!i.t||i.arch||i.kind==="prog")return;var k="mine-i-"+i.k;if(i.todo||linked[i.k]){i.arch=1;i.ts=Date.now();ch=true;return}
+    if(!have[k])m.push({k:k,who:i.t,ts:i.ts||Date.now(),side:guessSide(i.t),kind:"idea"});i.arch=1;i.ts=Date.now();ch=true});
+  if(ch){lsSet(MINE+"todo",m);lsSet(IDEAS,all);queuePush()}}
+document.addEventListener("keydown",function(ev){var t=ev.target;if(!t||t.id!=="inew")return;
+  if(ev.key==="Enter"&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();addTodo()}});
+document.addEventListener("input",function(ev){if(ev.target&&ev.target.id==="inew"){lsSet(DRAFT,ev.target.value);qGrow()}});
 function nativeClose(){try{window.webkit.messageHandlers.hq.postMessage("close")}catch(x){}}
 function openIdeas(){return lsGet(IDEAS,[]).filter(function(i){return i&&!i.arch}).length}
-function panelSave(){var q=QUICK;lsDel(DRAFT);addIdea();if(q)nativeClose()}
+function panelSave(){addTodo()}
 document.addEventListener("keydown",function(ev){if(ev.key==="Escape")nativeClose()});   // no-op in a browser
 window.hqOpen=function(quick){
   QUICK=!!quick;
@@ -1324,11 +1384,16 @@ function challengeHTML(){
    +(used.wn+used.dn?'<button class="ib" id="sundo">Undo</button>':'')+'<button class="ib" id="spause">'+(paused?'Resume':'Pause')+'</button></div></section>';
   return h}
 /* ---------- capture ---------- */
-function captureHTML(titled){var kb=window.matchMedia&&window.matchMedia("(hover:hover)").matches;
-  return '<section class="sect s-idea g-idea">'+(titled?'<h2 class="ttl">Ideas and to-dos</h2>':'')+'<textarea id="inew" class="inew" placeholder="Idea, to-do or programming note"></textarea><div class="iact"><button class="ib ton" id="iadd">Idea</button><button class="ib ton" id="itodo">To-do</button><button class="ib ton" id="iprog">Programming</button>'+(kb?'<span class="sm">Enter saves an idea. &#8984; Enter saves a to-do.</span>':'')+'</div></section>'}
+var QMSG=null;   // {t,until}: the last save, shown as the box's placeholder so it is visible above the phone keyboard
+function captureHTML(){   // pinned under the tabs on every page. One box, Enter saves to the to-do list (CJ, Nov 11 2026)
+  var ph="To-do, or call Dawn fri 9am";
+  return '<div class="qbar"><textarea id="inew" class="inew qin" rows="1" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" placeholder="'+e(ph)+'">'+e(lsGet(DRAFT,""))+'</textarea><button class="qadd" id="iadd" type="button" aria-label="Add">+</button></div>'}
+function qGrow(){var n=$("inew");if(!n)return;n.style.height="auto";n.style.height=Math.min(n.scrollHeight,96)+"px"}
 var TOASTT=null;function toast(m){var t=$("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";document.body.appendChild(t)}t.textContent=m;t.hidden=false;if(TOASTT)clearTimeout(TOASTT);TOASTT=setTimeout(function(){t.hidden=true},2400)}
 /* ---------- pages ---------- */
-function shell(body){var dr=snapDrafts();var pv=PREVIEW?'<div class="pv">Preview: nothing saves</div>':'';$("app").innerHTML=(lane==="health"?'':pv)+tabsHTML()+(lane==="health"?'':body);restoreDrafts(dr);FLASHID=null;showHealth(lane==="health");var sdx=$("sdraft");if(sdx){sdx.style.height="auto";sdx.style.height=(sdx.scrollHeight+6)+"px"}}
+function qFocus(){var a=document.activeElement;return a&&a.id==="inew"?[a.selectionStart,a.selectionEnd]:null}
+function qRefocus(f){if(!f)return;var n=$("inew");if(!n)return;n.focus();try{n.setSelectionRange(f[0],f[1])}catch(x){}}
+function shell(body){var dr=snapDrafts(),qf=qFocus();var pv=PREVIEW?'<div class="pv">Preview: nothing saves</div>':'';$("app").innerHTML=(lane==="health"?'':pv)+tabsHTML()+(lane==="health"?'':body);restoreDrafts(dr);qGrow();qRefocus(qf);FLASHID=null;showHealth(lane==="health");var sdx=$("sdraft");if(sdx){sdx.style.height="auto";sdx.style.height=(sdx.scrollHeight+6)+"px"}}
 window.hqLogFor=function(k,v,replace){var L=logState(),id="log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   if(replace)Object.keys(L.entries).forEach(function(x){var y=L.entries[x];if(y.date===k&&!y.deleted){y.deleted=1;y.ts=Date.now()}});
   L.entries[id]={date:k,text:v,minutes:null,ts:Date.now()};LGEN++;lsSet(LOG,L);lsSet("cc-log-dirty",1);toast("Logged. It goes to CircleFit.");logSync();return true};
@@ -1376,15 +1441,14 @@ function drawToday(panel){
   var ed=eveDate(),k=dk(ed),n=lsGet(NIGHTS,{})[k],H=headline(),won=!!n,ae=document.activeElement,foc=(ae&&ae.id==="inew")||(QUICK&&!MEDIT&&(!ae||ae===document.body));
   var h='<div class="page'+(won?' won':'')+'">';
   if(busy&&!FEED)h+='<div class="note">Loading</div>';if(err)h+='<div class="err">'+e(err)+'</div>';
-  if(panel)h+=captureHTML();
   h+=mottoHTML();
   h+='<div class="head '+H.c+'"><div class="kick">'+DAYS[ed.getDay()]+' '+MON[ed.getMonth()]+' '+ed.getDate()+'</div><h1>'+e(H.t)+'</h1>'+(H.sub?'<div class="sub">'+e(H.sub)+'</div>':'')+'</div>';
   if(LB){h+=listCardHTML();
-    h+='<div class="grid3">'+todoHTML(won)+ringsHTML()+reminderHTML().replace('class="sect s-remind"','class="sect s-remind g-remind"')+timelineHTML(k).replace('</h2>','</h2>'+dayNumsHTML(k))+lightsHTML()+discHTML()+weekLineHTML()+(panel?'':captureHTML())+'</div>';
+    h+='<div class="grid3">'+todoHTML(won)+ringsHTML()+reminderHTML().replace('class="sect s-remind"','class="sect s-remind g-remind"')+timelineHTML(k).replace('</h2>','</h2>'+dayNumsHTML(k))+lightsHTML()+discHTML()+weekLineHTML()+progHTML()+'</div>';
     h+=sysHTML()+'</div>';shell(h);wireCallIt();wireCapture(foc);return}
   h+=nightsStrip()+sinceLine();
   h+=listCardHTML()+reminderHTML();   // My list on Today too (CJ, Nov 9: "my to do list is very important and its missing things")
-  h+='<div class="grid3">'+todoHTML(won)+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+(panel?'':captureHTML())+''+'</div>';
+  h+='<div class="grid3">'+todoHTML(won)+bandHTML()+timelineHTML(k)+lightsHTML()+discHTML()+challengeHTML()+progHTML()+'</div>';
   h+=sysHTML()+'</div>';
   shell(h);wireCallIt();wireCapture(foc)}
 function drawHQ(){drawToday(false)}
@@ -1417,19 +1481,19 @@ function mineListHTML(on){var mine=lsGet(MINE+"todo",[]).filter(function(m){retu
   if(!mine.length)return h+'<div class="note">Nothing on it.</div></section>';
   h+='<ul>';mine.slice().reverse().forEach(function(m){h+='<li class="mline" data-mk="'+e(m.k)+'">'
     +(MEDIT===m.k?'<textarea class="iedit" id="medit">'+e(m.who)+'</textarea><div class="iact"><button class="ib" data-m="save">Save</button><button class="ib" data-m="cancel">Cancel</button></div>'
-     :(on&&m.who.length>140?(function(){var c=m.who.lastIndexOf(" ",130);if(c<60)c=130;var op=OPEN["m:"+m.k];return '<div class="itext clip'+(op?' open':'')+'" data-mk="'+e(m.k)+'">'+e(m.who.slice(0,c))+'<span class="rest">'+e(m.who.slice(c))+'</span> <button class="b-more" data-a="more">'+(op?'less':'more')+'</button></div>'})():'<div class="itext">'+e(m.who)+'</div>')+'<div class="iact"><button class="ib" data-m="done">Done</button><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="toidea">Move to Ideas</button></div>')+'</li>'});
+     :(on&&m.who.length>140?(function(){var c=m.who.lastIndexOf(" ",130);if(c<60)c=130;var op=OPEN["m:"+m.k];return '<div class="itext clip'+(op?' open':'')+'" data-mk="'+e(m.k)+'">'+e(m.who.slice(0,c))+'<span class="rest">'+e(m.who.slice(c))+'</span> <button class="b-more" data-a="more">'+(op?'less':'more')+'</button></div>'})():'<div class="itext">'+e(m.who)+'</div>')+'<div class="iact"><button class="ib" data-m="done">Done</button><button class="ib" data-m="edit">Edit</button></div>')+'</li>'});
   return h+'</ul>'+(typeof more!=="undefined"&&more?'<button class="fchip" data-lane="hq">'+more+' more</button>':'')+'</section>'}
-function addProg(){
-  var ta=$("inew"),v=ta?ta.value.trim():"";if(!v)return;
+function addProg(v){
+  var ta=$("inew");v=String(v||"").trim();if(!v)return;
   var q=QUICK,sd=seasonData(),names=(sd&&sd.names)||[],ath="";
   names.forEach(function(n){if(!ath&&new RegExp("\\b"+n+"\\b","i").test(v))ath=n});
   var all=lsGet(IDEAS,[]);all.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:v,ts:Date.now(),kind:"prog",ath:ath});
-  lsSet(IDEAS,all);ta.value="";lsDel(DRAFT);queuePush(1);toast(ath?"Saved to Programming, for "+ath:"Saved to Programming");draw();if(q)nativeClose()}
+  lsSet(IDEAS,all);if(ta)ta.value="";lsDel(DRAFT);queuePush(1);toast(ath?"Saved to Programming, for "+ath:"Saved to Programming");draw();if(q)nativeClose()}
 function progHTML(){
   var by={},all=lsGet(IDEAS,[]).filter(function(i){return i&&i.kind==="prog"&&!i.arch});
   all.forEach(function(i){var a=i.ath||"General";(by[a]=by[a]||[]).push(i)});
-  var h='<section class="sect s-prognote"><h2 class="ttl">Programming <em>'+all.length+'</em></h2>';
-  if(!all.length)h+='<div class="sm">Notes here feed that athlete\'s next Thursday draft. Nothing goes to them unless you approve it.</div>';
+  if(!all.length)return '';
+  var h='<section class="sect s-prognote"><h2 class="ttl">Programming notes <em>'+all.length+'</em></h2><div class="sm">These feed that athlete\'s next Thursday draft. Start a line with "prog:" to add one.</div>';
   Object.keys(by).sort(function(a,b){return a==="General"?1:(b==="General"?-1:a.localeCompare(b))}).forEach(function(a){
     h+='<div class="dtitle dsub">'+e(a)+'</div><ul class="igrid">';by[a].forEach(function(i){h+=ideaCard(i)});h+='</ul>'});
   return h+'</section>'}
@@ -1463,16 +1527,16 @@ function todoLists(){
   (FEED&&FEED.sections||[]).forEach(function(s){if(/personal/i.test(s.id||""))(s.items||[]).forEach(function(i){psec[keyOf(i)]=1})});
   function sideOf(i){var k=keyOf(i),base=psec[k]?"personal":"work";return flagsFor(i).side?(base==="work"?"personal":"work"):base}
   function sw(i){var k=keyOf(i);if(seen[k]||isDone(i))return null;if(sys[k]&&!SYSWORK.test(String(i.who||"")))return null;seen[k]=1;return {it:i,k:k,side:sideOf(i)}}
-  var mine=lsGet(MINE+"todo",[]).filter(function(m){return m&&!m.done}).map(function(m){return {m:m,k:m.k,side:mineSide(m),due:mineDue(m)}});
+  var mine=lsGet(MINE+"todo",[]).filter(function(m){return m&&!m.done}).map(function(m){return {m:m,k:m.k,side:mineSide(m),due:mineDue(m)||(m.at&&m.at<=Date.now())}});
   var soon=callSoon(),pin=(ex().pin||{}).k,head=[],sweep=[],lv=liveGaps();
   if(soon){var x=sw(soon);if(x)head.push(x)}
   if(lv){if(lv.item&&!isDone(lv.item))head.push({it:lv.item,k:keyOf(lv.item),side:"work"});(FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){if(GAPRX.test(String(i.who||"")))seen[keyOf(i)]=1})})}
-  mine.forEach(function(x){if(x.k===pin){x.pinned=1;head.push(x)}});
+  mine.forEach(function(x){if(x.k===pin){x.pinned=1;head.push(x)}else if(/^mine-\d+$/.test(x.k)&&Date.now()-(+x.k.slice(5))<1800000){x.fresh=1;head.push(x)}});   // added on the page in the last 30 min: on top, keyed on creation so edits do not re-raise it
   nextList().forEach(function(i){var x=sw(i);if(x){if(x.k===pin){x.pinned=1;head.push(x)}else if(newFps(i).length)head.push(x);else sweep.push(x)}});   // a row that came back with something new goes to the top
   (FEED&&FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){var x=sw(i);if(x){if(newFps(i).length)head.push(x);else sweep.push(x)}})});
   sweep=sweep.filter(function(x){if(pin&&x.k===pin){x.pinned=1;head.push(x);return false}return true});
   function build(side,nTop,nToday){
-    var h=head.filter(function(x){return x.side===side}),due=mine.filter(function(x){return x.side===side&&x.due&&!x.pinned}),sv=sweep.filter(function(x){return x.side===side}).sort(function(p,q){return (SAFERX.test(tText(q))?1:0)-(SAFERX.test(tText(p))?1:0)}),und=mine.filter(function(x){return x.side===side&&!x.due&&!x.pinned});
+    var h=head.filter(function(x){return x.side===side}),due=mine.filter(function(x){return x.side===side&&x.due&&!x.pinned&&!x.fresh}),sv=sweep.filter(function(x){return x.side===side}).sort(function(p,q){return (SAFERX.test(tText(q))?1:0)-(SAFERX.test(tText(p))?1:0)}),und=mine.filter(function(x){return x.side===side&&!x.due&&!x.pinned&&!x.fresh});
     var now=h.concat(due,sv.slice(0,nTop)),rest=sv.slice(nTop,nTop+1).concat(und.slice(0,2),sv.slice(nTop+1),und.slice(2));   // at most 2 undated own items above the sweep's 4th   // undated own items sit just under the sweep's top 3
     return {now:now,today:rest.slice(0,nToday),later:rest.slice(nToday),n:now.length+rest.length}}
   return {work:build("work",2,4),pers:build("personal",1,2)}}
@@ -1489,12 +1553,13 @@ function dayList(){ // today's list as he posted it in #1-daily-to-do (CJ, Nov 1
   var t0=Math.max(parseDay(day).getTime()-6*36e5,(post.at||0)*1000);   // a tick made before this list was posted is not a tick on it
      // a tick after 6pm the evening before counts for this list
   return post.lines.filter(function(x){var k=lkey(x[0]),c=clear[k],back=c&&c.x===0&&(c.ts||0)>t0;return (!x[1]||back)&&!lPostSkip(x[0])&&!lHead(x[0])&&!(tickX(clear,k)>t0)}).map(function(x){return {daily:1,k:lkey(x[0]),t:x[0],side:"work",day:day}})}
+function mBadge(x){var m=x.m,h='';if(m&&m.kind==="idea")h+=' <small class="kidea">idea</small>';if(m&&m.at&&!(m.at<=Date.now()))h+=' <small class="kat">'+e(fmtAt(m.at))+'</small>';else if(x.due)h+=' <small>due</small>';return h}
 function tText(x){if(x.daily)return x.t;if(x.m)return String(x.m.who||"");var i=x.it,nr=newRecs(i),t=heroTitle(i),n=(i.more||[]).length;if(nr.length)return "New from "+String(i.pname||"them").split(" ")[0]+": "+nr[0].t;return (n?"("+(n+1)+") ":"")+t}
 function tAct(x){if(x.m)return "";var l=(x.it.l||[])[0],u=l&&safe(l[1]);if(!u)return "";var lab=String(l[2]||"Open").split(/ [-:(]|, /)[0];if(lab.length>16)lab="Open";
   return '<a class="tgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(lab)+'</a>'}
 function tDetail(x){var other=x.side==="work"?"Personal":"Work",h='<div class="tdet">';
   if(x.m){if(MEDIT===x.k)return '<div class="tdet"><textarea class="iedit" id="medit">'+e(x.m.who)+'</textarea><div class="iact"><button class="ib" data-m="save">Save</button><button class="ib" data-m="cancel">Cancel</button></div></div>';
-    h+='<div class="tfull">'+e(x.m.who)+'</div><div class="iact"><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="flip">Move to '+other+'</button><button class="ib" data-m="toidea">Move to Ideas</button><button class="ib" data-m="pin">'+(x.pinned?'Unpin':'Pin to top')+'</button></div>';return h+'</div>'}
+    h+='<div class="tfull">'+e(x.m.who)+'</div><div class="iact"><button class="ib" data-m="edit">Edit</button><button class="ib" data-m="flip">Move to '+other+'</button><button class="ib" data-m="pin">'+(x.pinned?'Unpin':'Pin to top')+'</button></div>';return h+'</div>'}
   var i=x.it,w=cleanCopy(i.why||i.w||"");
   var nr=newRecs(i);if(nr.length)h+='<div class="tfull"><b>New</b></div>'+nr.map(function(r){return '<blockquote>'+e(r.t)+'</blockquote>'}).join('')+'<div class="sm">Earlier: '+e(cleanCopy(i.who))+'</div>';
   if(i.q)h+='<blockquote>'+e(i.q)+'</blockquote>';if(w)h+='<div class="tfull">'+e(w)+'</div>';
@@ -1504,10 +1569,10 @@ function tDetail(x){var other=x.side==="work"?"Personal":"Work",h='<div class="t
   return h+'<div class="iact"><button class="ib" data-a="side">Move to '+other+'</button><button class="ib" data-a="pin">'+(x.pinned?'Unpin':'Pin to top')+'</button></div></div>'}
 function tRow(x,top){if(x.daily)return '<li class="trow"><div class="tline"><button class="tchk" data-lclr="'+e(x.k)+'" aria-label="Done">&#10003;</button><span class="ttext">'+e(x.t)+'</span></div></li>';var op=!!OPEN["t:"+x.k]||MEDIT===x.k,cls=x.m?'mline trow':'item trow',da=x.m?' data-mk="'+e(x.k)+'"':' data-k="'+e(x.k)+'"';
   return '<li class="'+cls+(op?' open':'')+(x.due||top?' due':'')+(top?' top':'')+'"'+da+'><div class="tline">'+(x.m?'<button class="tchk" data-m="done" aria-label="Done">&#10003;</button>':'<button class="tchk" data-a="done" aria-label="Done">&#10003;</button>')
-    +'<button class="ttext" data-t="'+e(x.k)+'">'+e(tText(x))+(x.due?' <small>due</small>':'')+'</button>'+tAct(x)+'</div>'+(op?tDetail(x):'')+'</li>'}
+    +'<button class="ttext" data-t="'+e(x.k)+'">'+e(tText(x))+mBadge(x)+'</button>'+tAct(x)+'</div>'+(op?tDetail(x):'')+'</li>'}
 function tHero(x){var op=!!OPEN["t:"+x.k]||MEDIT===x.k,cls=x.m?'mline':'item',da=x.m?' data-mk="'+e(x.k)+'"':' data-k="'+e(x.k)+'"';
   var l=x.m?null:(x.it.l||[])[0],u=l&&safe(l[1]);
-  var h='<li class="'+cls+' hero thero"'+da+'><button class="htitle ttext" data-t="'+e(x.k)+'">'+e(tText(x))+'</button><div class="hact">';
+  var h='<li class="'+cls+' hero thero"'+da+'><button class="htitle ttext" data-t="'+e(x.k)+'">'+e(tText(x))+mBadge(x)+'</button><div class="hact">';
   h+=u?'<a class="hgo" href="'+e(u)+'" target="_blank" rel="noopener noreferrer">'+e(l[2])+'</a>':'';
   h+=x.m?'<button class="'+(u?'hchk':'hgo')+'" data-m="done">'+(u?'&#10003;':'Done')+'</button>':'<button class="'+(u?'hchk':'hgo')+'" data-a="done" aria-label="Done">'+(u?'&#10003;':'Done')+'</button>';
   return h+'</div>'+(op?tDetail(x):'')+'</li>'}
@@ -1534,7 +1599,7 @@ function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=t
   if(won&&!OPEN.wonlist&&!LB)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
   var DL=dayList(),DD=DL?dayDone():[];if(DL){h+='<div class="tsub"><span>'+(DL.length&&DL[0].day!==dk(eveDate())?'Tomorrow':'Today')+'\'s list</span><em>'+DL.length+' left'+(DD.length?' of '+(DL.length+DD.length):'')+' <button class="b-more" id="lopen">edit</button></em></div>'+(DL.length||DD.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+DD.map(doneRow).join('')+'</ul>':'<div class="note">All done.</div>')}
   return h+tList(T.work,DL?(LB?"Everything else":"Also waiting"):"Work",DL?(LB?6:3):(LB?8:6))+tList(T.pers,"Personal",3)+'<button class="tb tlater fullb" data-lane="todo">Full board</button></section>'}
-function draw(){
+function draw(){ensureBar(!!localStorage.getItem(KEYSTORE));
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){
     $("app").innerHTML='<div class="gate">'
@@ -1550,8 +1615,8 @@ function draw(){
     $("pw").focus();
     return;
   }
+  try{migrateIdeas()}catch(x){}
   if(lane==="hq"){drawHQ();return}
-  if(lane==="ideas"){drawIdeas();return}
   if(lane==="week"){drawWeek();return}
   if(lane==="health"){drawHealth();return}
   if(lane==="panel"){drawPanel();return}
@@ -1583,7 +1648,7 @@ function draw(){
     +'<button id="unhide" style="border:1px solid var(--line);background:none;color:var(--accent);'
     +'border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit;font-size:13px">Show them</button></div>';
   h+='</div>';
-  $("app").innerHTML=h;
+  var dr0=snapDrafts(),qf0=qFocus();$("app").innerHTML=h;restoreDrafts(dr0);qGrow();qRefocus(qf0);
 }
 
 document.addEventListener("click",function(ev){
@@ -1601,7 +1666,7 @@ document.addEventListener("click",function(ev){
     if(mka==="cancel"){MEDIT=null;draw();return}
     if(mka==="flip"){mh.side=mineSide(mh)==="work"?"personal":"work";mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush();toast("Moved to "+(mh.side==="work"?"Work":"Personal"));draw();return}
     if(mka==="pin"){var ep2=ex(),was2=(ep2.pin||{}).k===mkk;ep2.pin={k:was2?"":mkk,ts:Date.now()};exSave(ep2);draw();return}
-    if(mka==="save"){var mv=$("medit")&&$("medit").value.trim();MEDIT=null;if(mv&&mv!==mh.who){mh.who=mv;mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush()}draw();return}
+    if(mka==="save"){var mv=$("medit")&&$("medit").value.trim();MEDIT=null;if(mv&&mv!==mh.who){var c0=/^mine-\d+$/.test(mh.k)?new Date(+mh.k.slice(5)):new Date(),wasT=parseWhen(mh.who,c0),nowT=parseWhen(mv,c0);if(!nowT)delete mh.at;else if(nowT!==wasT)mh.at=parseWhen(mv);mh.who=mv;mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush()}draw();return}
     if(mka==="done"){mh.done=1;mh.ts=Date.now();var fr=mh.from;lsSet(MINE+"todo",mlist);if(fr){var i2=lsGet(IDEAS,[]);i2.forEach(function(i){if(i.k===fr&&i.todo){i.todo=0;i.ts=Date.now()}});lsSet(IDEAS,i2)}queuePush();draw();return}
     if(mka==="toidea"){var i3=lsGet(IDEAS,[]);i3.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:mh.who,ts:Date.now()});lsSet(IDEAS,i3);mh.done=1;mh.moved=1;mh.ts=Date.now();lsSet(MINE+"todo",mlist);queuePush();toast("Moved to Ideas");draw();return}
     return}
@@ -1649,9 +1714,7 @@ document.addEventListener("click",function(ev){
     var LL=logState(),ld=LL.entries[mt.dataset.ld];DELASK=null;if(LEDIT===mt.dataset.ld){LEDIT=null;var dq=$("dlog");if(dq)dq.value=""}if(ld){ld.deleted=1;ld.ts=Date.now();LGEN++;lsSet(LOG,LL);lsSet("cc-log-dirty",1);draw();logSync()}return}
   var t=ev.target;
   if(t.id==="refresh"){load();return}
-  if(t.id==="iadd"){if(lane==="panel"||lane==="hq")panelSave();else addIdea();return}
-  if(t.id==="itodo"){addTodo();return}
-  if(t.id==="iprog"){addProg();return}
+  if(t.id==="iadd"){addTodo();return}
   if(t.id==="rsave"){logReminder(false);return}
   if(t.id==="rskip"){logReminder(true);return}
   var tb=t.closest&&t.closest("[data-tag]");
