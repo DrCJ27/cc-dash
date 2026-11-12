@@ -1538,10 +1538,12 @@ function todoLists(){
   (FEED&&FEED.sections||[]).forEach(function(s){(s.items||[]).forEach(function(i){var x=sw(i);if(x){if(newFps(i).length)head.push(x);else sweep.push(x)}})});
   sweep=sweep.filter(function(x){if(pin&&x.k===pin){x.pinned=1;head.push(x);return false}return true});
   function build(side,nTop,nToday){
-    var h=head.filter(function(x){return x.side===side}),due=mine.filter(function(x){return x.side===side&&x.due&&!x.pinned&&!x.fresh}),sv=sweep.filter(function(x){return x.side===side}).sort(function(p,q){return (SAFERX.test(tText(q))?1:0)-(SAFERX.test(tText(p))?1:0)}),und=mine.filter(function(x){return x.side===side&&!x.due&&!x.pinned&&!x.fresh});
+    var h=head.filter(function(x){return x.side===side&&!x.m}),due=[],sv=sweep.filter(function(x){return x.side===side}).sort(function(p,q){return (SAFERX.test(tText(q))?1:0)-(SAFERX.test(tText(p))?1:0)}),und=[];
     var now=h.concat(due,sv.slice(0,nTop)),rest=sv.slice(nTop,nTop+1).concat(und.slice(0,2),sv.slice(nTop+1),und.slice(2));   // at most 2 undated own items above the sweep's 4th   // undated own items sit just under the sweep's top 3
     return {now:now,today:rest.slice(0,nToday),later:rest.slice(nToday),n:now.length+rest.length}}
-  return {work:build("work",2,4),pers:build("personal",1,2)}}
+  var own=mine.slice().sort(function(a,b){return (b.pinned?1:0)-(a.pinned?1:0)||(b.due?1:0)-(a.due?1:0)||mBorn(b)-mBorn(a)});
+  return {work:build("work",2,4),pers:build("personal",1,2),own:{now:own,today:[],later:[],n:own.length}}}
+function mBorn(x){return /^mine-\d+$/.test(x.k)?+x.k.slice(5):entTs(x.m)}   // when he typed it (desk lines: last change)
 var GAPRX=/\bno card\b/i;
 function liveGaps(){ // hourly no-model check (hq/refresh_live.py). Fresh = under 3 hours old; it then replaces the sweep's own "no card" cards
   var L=FEED&&FEED.live;if(!L||!L.ok||!L.at||(L.failed||[]).length||L.circlefit_error)return null;if(Date.now()-new Date(L.at).getTime()>3*3600000)return null;
@@ -1582,7 +1584,7 @@ function tList(L,name,show){ // plain ranked checklist (CJ, Nov 10: Now/Today/La
   var all=L.now.concat(L.today,L.later),h='<div class="tsub"><span>'+name+'</span><em>'+all.length+'</em></div>';
   if(!all.length)return h+'<div class="note">Nothing on it.</div>';
   var ok=OPEN["tl:"+name],vis=ok?all:all.slice(0,show);
-  h+='<ul class="tl">'+vis.map(function(x,i){return tRow(x,i===0&&name!=="Personal")}).join('')+'</ul>';
+  h+='<ul class="tl">'+vis.map(function(x,i){return tRow(x,i===0&&name!=="Personal"&&name!=="My list")}).join('')+'</ul>';
   if(all.length>show)h+='<button class="tb tlater" data-tl="'+name+'">'+(ok?'Show less':(all.length-show)+' more')+'</button>';
   return h}
 // A tick is one line at one moment. Several lines cleared in the same millisecond is the list editor dropping
@@ -1598,9 +1600,9 @@ function dayDone(){   // the lines on the same posted list that are finished: st
 function doneRow(x){return '<li class="trow done"><div class="tline">'+(!x.mine?'<span class="tchk on" title="Crossed off in Slack">&#10003;</span>':'<button class="tchk on" data-lunclr="'+e(x.k)+'" aria-label="Not done, put it back">&#10003;</button>')+'<span class="ttext">'+e(x.t)+'</span></div></li>'}
 function todoHTML(won){if(!FEED&&!lsGet(MINE+"todo",[]).length)return '';var T=todoLists();
   var h='<section class="sect s-todo g-next" id="next"><h2 class="ttl">To do</h2>';
-  if(won&&!OPEN.wonlist&&!LB)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n)+' still open</button></section>';
+  if(won&&!OPEN.wonlist&&!LB)return h+'<button class="more" data-won="1">'+(T.work.n+T.pers.n+T.own.n)+' still open</button></section>';
   var DL=dayList(),DD=DL?dayDone():[];if(DL){h+='<div class="tsub"><span>'+(DL.length&&DL[0].day!==dk(eveDate())?'Tomorrow':'Today')+'\'s list</span><em>'+DL.length+' left'+(DD.length?' of '+(DL.length+DD.length):'')+' <button class="b-more" id="lopen">edit</button></em></div>'+(DL.length||DD.length?'<ul class="tl">'+DL.map(function(x){return tRow(x)}).join('')+DD.map(doneRow).join('')+'</ul>':'<div class="note">All done.</div>')}
-  return h+tList(T.work,DL?(LB?"Everything else":"Also waiting"):"Work",DL?(LB?6:3):(LB?8:6))+tList(T.pers,"Personal",3)+'<button class="tb tlater fullb" data-lane="todo">Full board</button></section>'}
+  return h+tList(T.own,"My list",LB?10:8)+tList(T.work,DL?(LB?"Everything else":"Also waiting"):"Work",DL?(LB?6:3):(LB?8:6))+tList(T.pers,"Personal",3)+'<button class="tb tlater fullb" data-lane="todo">Full board</button></section>'}
 function draw(){ensureBar(!!localStorage.getItem(KEYSTORE));
   var phrase=localStorage.getItem(KEYSTORE);
   if(!phrase){
