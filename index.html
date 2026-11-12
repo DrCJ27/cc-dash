@@ -1495,7 +1495,7 @@ function progHTML(){
   var by={},all=lsGet(IDEAS,[]).filter(function(i){return i&&i.kind==="prog"&&!i.arch});
   all.forEach(function(i){var a=i.ath||"General";(by[a]=by[a]||[]).push(i)});
   if(!all.length)return '';
-  var h='<section class="sect s-prognote"><h2 class="ttl">Programming notes <em>'+all.length+'</em></h2><div class="sm">These feed that athlete\'s next Thursday draft. Start a line with "prog:" to add one.</div>';
+  var h='<section class="sect s-prognote g-idea"><h2 class="ttl">Programming notes <em>'+all.length+'</em></h2><div class="sm">These feed that athlete\'s next Thursday draft. Start a line with "prog:" to add one.</div>';
   Object.keys(by).sort(function(a,b){return a==="General"?1:(b==="General"?-1:a.localeCompare(b))}).forEach(function(a){
     h+='<div class="dtitle dsub">'+e(a)+'</div><ul class="igrid">';by[a].forEach(function(i){h+=ideaCard(i)});h+='</ul>'});
   return h+'</section>'}
