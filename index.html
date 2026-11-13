@@ -250,6 +250,7 @@ html{scroll-padding-top:calc(120px + env(safe-area-inset-top,0px))}
 .qbar{min-height:56px;box-sizing:border-box;display:flex;gap:8px;align-items:center;padding:6px max(14px,env(safe-area-inset-right,0px)) 6px max(14px,env(safe-area-inset-left,0px));background:var(--bg)}
 .qbar .qin{flex:1;min-height:44px;height:44px;max-height:96px;resize:none;margin:0;line-height:20px;overflow-y:auto}
 .lb .qbar .qin{padding:12px 16px}
+.qbar.pbar,.lb .qbar.pbar{padding:8px 0!important;min-height:0;background:transparent;margin:6px 0 10px;max-width:none}
 .qbar .qadd{flex:none;width:44px;height:44px;border:0;border-radius:999px;background:var(--work);color:var(--bg);font:inherit;font-size:26px;font-weight:600;line-height:1;cursor:pointer}
 .kidea,.kat{font-size:12px;opacity:.75;margin-left:4px}
 .lb .page>h2{top:calc(112px + env(safe-area-inset-top,0px))!important}
@@ -311,9 +312,9 @@ function setFav(){}
 var KEYSTORE="cc-pass", FLAGS="cc-flags-", MINE="cc-mine-", IDEAS="cc-ideas", NIGHTS="cc-nights", HQCFG="cc-hq";
 var FEED=null, err=null, busy=false, hidden=0, GLANCE=null;
 var OPEN={}, PEND=0, HQ_ALL=0, FOLDS={};   // open folds/cards, redraw deferred while typing, "+N more" expanded
-function typing(){var a=document.activeElement;if(a&&a.id==="inew"&&!a.value.trim())return false;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
+function typing(){var a=document.activeElement;if(a&&(a.id==="inew"||a.id==="pnew")&&!a.value.trim())return false;return !!(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))}
 function softDraw(){if(typing()){PEND=1;drawSys();return}draw()}
-function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT,_me:MEDIT};["inew","ifind","iedit","medit","dlog","dmin","rlog"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
+function snapDrafts(){var o={_ie:typeof IEDIT==="undefined"?null:IEDIT,_le:typeof LEDIT==="undefined"?null:LEDIT,_me:MEDIT};["inew","pnew","ifind","iedit","medit","dlog","dmin","rlog"].forEach(function(id){var x=document.getElementById(id);if(x)o[id]=x.value});return o}
 function restoreDrafts(o){Object.keys(o).forEach(function(id){if(id==="_ie"||id==="_le"||id==="_me")return;var x=document.getElementById(id);if(!x)return;if(id==="medit"){if(o._me===MEDIT)x.value=o[id];return}if(id==="dlog"){if(o[id]&&o._le===LEDIT)x.value=o[id];return}if(id==="iedit"){if(o._ie===IEDIT)x.value=o[id];return}if(!x.value)x.value=o[id]})}
 var HQ=lsGet0(HQCFG,null);           // {url,key} -- rides inside the encrypted todo feed
 var SYNC={state:HQ?"":"waiting for feed",ok:null};
@@ -1092,7 +1093,7 @@ function addIdea(){
 function saveIdeaEdit(){
   var ed=$("iedit");if(!ed||!IEDIT)return;var v=ed.value.trim();
   if(!v){IEDIT=null;redrawIdeas();return}
-  var all=lsGet(IDEAS,[]),ch=false;all.forEach(function(i){if(i.k===IEDIT&&i.t!==v){i.t=v;i.ts=Date.now();ch=true}});
+  var all=lsGet(IDEAS,[]),ch=false;all.forEach(function(i){if(i.k===IEDIT&&i.t!==v){i.t=v;if(i.kind==="prog")i.ath=progAth(v);i.ts=Date.now();ch=true}});
   lsSet(IDEAS,all);IEDIT=null;if(ch)queuePush();redrawIdeas();
 }
 function ideaAct(k,a){
@@ -1175,9 +1176,10 @@ function migrateIdeas(){var all=lsGet(IDEAS,[]),m=lsGet(MINE+"todo",[]),have={},
   all.forEach(function(i){if(!i||!i.k||!i.t||i.arch||i.kind==="prog")return;var k="mine-i-"+i.k;if(i.todo||linked[i.k]){i.arch=1;i.ts=Date.now();ch=true;return}
     if(!have[k])m.push({k:k,who:i.t,ts:i.ts||Date.now(),side:guessSide(i.t),kind:"idea"});i.arch=1;i.ts=Date.now();ch=true});
   if(ch){lsSet(MINE+"todo",m);lsSet(IDEAS,all);queuePush()}}
-document.addEventListener("keydown",function(ev){var t=ev.target;if(!t||t.id!=="inew")return;
-  if(ev.key==="Enter"&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();addTodo()}});
-document.addEventListener("input",function(ev){if(ev.target&&ev.target.id==="inew"){lsSet(DRAFT,ev.target.value);qGrow()}});
+document.addEventListener("keydown",function(ev){var t=ev.target;if(!t||(t.id!=="inew"&&t.id!=="pnew"))return;
+  if(ev.key==="Enter"&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();if(t.id==="pnew")addProg(t.value,"pnew");else addTodo()}});
+document.addEventListener("input",function(ev){if(ev.target&&ev.target.id==="inew"){lsSet(DRAFT,ev.target.value);qGrow()}
+  if(ev.target&&ev.target.id==="pnew"){lsSet("cc-prog-draft",ev.target.value);qGrow("pnew");var pm=$("pmatch");if(pm)pm.textContent=pmatchTxt(ev.target.value)}});
 function nativeClose(){try{window.webkit.messageHandlers.hq.postMessage("close")}catch(x){}}
 function openIdeas(){return lsGet(IDEAS,[]).filter(function(i){return i&&!i.arch}).length}
 function panelSave(){addTodo()}
@@ -1390,11 +1392,11 @@ var QMSG=null;   // {t,until}: the last save, shown as the box's placeholder so 
 function captureHTML(){   // pinned under the tabs on every page. One box, Enter saves to the to-do list (CJ, Nov 11 2026)
   var ph="To-do, or call Dawn fri 9am";
   return '<div class="qbar"><textarea id="inew" class="inew qin" rows="1" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" placeholder="'+e(ph)+'">'+e(lsGet(DRAFT,""))+'</textarea><button class="qadd" id="iadd" type="button" aria-label="Add">+</button></div>'}
-function qGrow(){var n=$("inew");if(!n)return;n.style.height="auto";n.style.height=Math.min(n.scrollHeight,96)+"px"}
+function qGrow(id){if(!id)qGrow("pnew");var n=$(id||"inew");if(!n)return;n.style.height="auto";n.style.height=Math.min(n.scrollHeight,96)+"px"}
 var TOASTT=null;function toast(m){var t=$("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";document.body.appendChild(t)}t.textContent=m;t.hidden=false;if(TOASTT)clearTimeout(TOASTT);TOASTT=setTimeout(function(){t.hidden=true},2400)}
 /* ---------- pages ---------- */
-function qFocus(){var a=document.activeElement;return a&&a.id==="inew"?[a.selectionStart,a.selectionEnd]:null}
-function qRefocus(f){if(!f)return;var n=$("inew");if(!n)return;n.focus();try{n.setSelectionRange(f[0],f[1])}catch(x){}}
+function qFocus(){var a=document.activeElement;return a&&(a.id==="inew"||a.id==="pnew")?[a.selectionStart,a.selectionEnd,a.id]:null}
+function qRefocus(f){if(!f)return;var n=$(f[2]||"inew");if(!n)return;n.focus();try{n.setSelectionRange(f[0],f[1])}catch(x){}}
 function shell(body){var dr=snapDrafts(),qf=qFocus();var pv=PREVIEW?'<div class="pv">Preview: nothing saves</div>':'';$("app").innerHTML=(lane==="health"?'':pv)+tabsHTML()+(lane==="health"?'':body);restoreDrafts(dr);qGrow();qRefocus(qf);FLASHID=null;showHealth(lane==="health");var sdx=$("sdraft");if(sdx){sdx.style.height="auto";sdx.style.height=(sdx.scrollHeight+6)+"px"}}
 window.hqLogFor=function(k,v,replace){var L=logState(),id="log-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   if(replace)Object.keys(L.entries).forEach(function(x){var y=L.entries[x];if(y.date===k&&!y.deleted){y.deleted=1;y.ts=Date.now()}});
@@ -1485,17 +1487,22 @@ function mineListHTML(on){var mine=lsGet(MINE+"todo",[]).filter(function(m){retu
     +(MEDIT===m.k?'<textarea class="iedit" id="medit">'+e(m.who)+'</textarea><div class="iact"><button class="ib" data-m="save">Save</button><button class="ib" data-m="cancel">Cancel</button></div>'
      :(on&&m.who.length>140?(function(){var c=m.who.lastIndexOf(" ",130);if(c<60)c=130;var op=OPEN["m:"+m.k];return '<div class="itext clip'+(op?' open':'')+'" data-mk="'+e(m.k)+'">'+e(m.who.slice(0,c))+'<span class="rest">'+e(m.who.slice(c))+'</span> <button class="b-more" data-a="more">'+(op?'less':'more')+'</button></div>'})():'<div class="itext">'+e(m.who)+'</div>')+'<div class="iact"><button class="ib" data-m="done">Done</button><button class="ib" data-m="edit">Edit</button></div>')+'</li>'});
   return h+'</ul>'+(typeof more!=="undefined"&&more?'<button class="fchip" data-lane="hq">'+more+' more</button>':'')+'</section>'}
-function addProg(v){
-  var ta=$("inew");v=String(v||"").trim();if(!v)return;
-  var q=QUICK,sd=seasonData(),names=(sd&&sd.names)||[],ath="";
-  names.forEach(function(n){if(!ath&&new RegExp("\\b"+n+"\\b","i").test(v))ath=n});
+function progAth(v){   // which athlete a programming note is for. "Laine: copy Amanda's EMOM" is Laine's, "HR rose fast" is nobody's
+  var sd=seasonData(),names=((sd&&sd.names)||[]).slice().sort(function(a,b){return b.length-a.length}),t=String(v||"").trim(),ath="";
+  names.forEach(function(n){if(!ath&&new RegExp("^"+n+"\\b","i").test(t))ath=n});
+  names.forEach(function(n){if(!ath&&new RegExp("\\b"+n+"\\b").test(t))ath=n});
+  return ath}
+function pmatchTxt(v){if(!String(v||"").trim())return "";var a=progAth(v);return a?"For "+a:"No athlete name found. It will save under General"}
+function addProg(v,src){   // src "pnew" = the box inside Programming notes (CJ, Nov 13 2026: "i cant add to them anywhere")
+  var ta=$(src||"inew");v=String(v||"").trim();if(!v)return;
+  var q=QUICK,ath=progAth(v);
   var all=lsGet(IDEAS,[]);all.push({k:"idea-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:v,ts:Date.now(),kind:"prog",ath:ath});
-  lsSet(IDEAS,all);if(ta)ta.value="";lsDel(DRAFT);queuePush(1);toast(ath?"Saved to Programming, for "+ath:"Saved to Programming");draw();if(q)nativeClose()}
+  lsSet(IDEAS,all);if(ta)ta.value="";if(src)lsDel("cc-prog-draft");else lsDel(DRAFT);queuePush(1);toast(ath?"Saved for "+ath:"Saved under General: no athlete name in it");draw();if(q)nativeClose();if(src){var pn=$(src);if(pn&&window.matchMedia&&window.matchMedia("(hover:hover)").matches)pn.focus()}}
 function progHTML(){
   var by={},all=lsGet(IDEAS,[]).filter(function(i){return i&&i.kind==="prog"&&!i.arch});
   all.forEach(function(i){var a=i.ath||"General";(by[a]=by[a]||[]).push(i)});
-  if(!all.length)return '';
-  var h='<section class="sect s-prognote g-idea"><h2 class="ttl">Programming notes <em>'+all.length+'</em></h2><div class="sm">These feed that athlete\'s next Thursday draft. Start a line with "prog:" to add one.</div>';
+  var h='<section class="sect s-prognote g-idea"><h2 class="ttl">Programming notes <em>'+all.length+'</em></h2><div class="sm">These feed that athlete\'s next Thursday draft. Start the note with the athlete\'s name.</div>'
+   +'<div class="qbar pbar"><textarea id="pnew" class="inew qin" rows="1" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" placeholder="Jen: less rest on the pull-up sets">'+e(lsGet("cc-prog-draft",""))+'</textarea><button class="qadd" id="padd" type="button" aria-label="Add programming note">+</button></div><div class="sm" id="pmatch">'+e(pmatchTxt(lsGet("cc-prog-draft","")))+'</div>';
   Object.keys(by).sort(function(a,b){return a==="General"?1:(b==="General"?-1:a.localeCompare(b))}).forEach(function(a){
     h+='<div class="dtitle dsub">'+e(a)+'</div><ul class="igrid">';by[a].forEach(function(i){h+=ideaCard(i)});h+='</ul>'});
   return h+'</section>'}
@@ -1719,6 +1726,7 @@ document.addEventListener("click",function(ev){
   var t=ev.target;
   if(t.id==="refresh"){load();return}
   if(t.id==="iadd"){addTodo();return}
+  if(t.id==="padd"){var pv=$("pnew");if(pv)addProg(pv.value,"pnew");return}
   if(t.id==="rsave"){logReminder(false);return}
   if(t.id==="rskip"){logReminder(true);return}
   var tb=t.closest&&t.closest("[data-tag]");
