@@ -830,7 +830,9 @@ function boss(wk){            // the Sunday for programming week wk, with his ow
   var left=w.left.filter(function(r){return !marked(r)}),n=(w.n||0)-(w.left.length-left.length);
   var tracksOK=(w.tracks||0)>=TRACKS_NEEDED;
   var lv=!tracksOK?"":(n===0?"Rx+":(n<=5?"Rx":(n<=10?"Scaled":"")));
-  return {w:w,left:left,n:n,lv:lv,closed:closed,tracksOK:tracksOK,saturdayOff:closed&&!w.sat_touched,
+  // n is the score, frozen at the cut. open is right now: who has nothing in the app for the week (season.py reads the app).
+  var open=closed&&Array.isArray(w.open)?w.open:null;
+  return {w:w,left:left,n:n,open:open,unread:open?(w.open_unread||0):0,now:open?open.length:Math.max(0,n),lv:lv,closed:closed,tracksOK:tracksOK,saturdayOff:closed&&!w.sat_touched,
     pts:lv?Math.round({"Rx+":150,"Rx":100,"Scaled":50}[lv]*(closed&&!w.sat_touched?1.5:1)):0}}
 function seasonTotals(){
   var L=logState(),today=dk(eveDate()),nights=lsGet(NIGHTS,{}),tot=0,wins=0,wn=0,dn=0,k=S_START,wkPts=0,mon=addDays(today,-((eveDate().getDay()+6)%7));
@@ -859,9 +861,11 @@ function seasonTotals(){
 function bossRow(wk,label){
   var b=boss(wk);if(!b)return '';
   var op=OPEN["b:"+wk],can=b.w.left.length>0;
-  var res=b.closed?(b.lv?b.lv+(b.saturdayOff?', Saturday off':''):b.n+' left'+(b.tracksOK||b.n>10?'':', tracks not live')):b.n+' left'+(b.tracksOK||b.n>10?'':', tracks '+(b.w.tracks||0)+' of '+TRACKS_NEEDED);
+  var res=b.closed?(b.lv?b.lv+(b.saturdayOff?', Saturday off':''):b.n+' left Saturday night'+(b.tracksOK||b.n>10?'':', tracks not live')):b.n+' left'+(b.tracksOK||b.n>10?'':', tracks '+(b.w.tracks||0)+' of '+TRACKS_NEEDED);
   var h='<button class="brow gd'+(op?' open':'')+'"'+(can?' data-boss="'+wk+'"':' disabled')+'><span>'+e(label)+'</span><b>'+e(res)+'</b></button>';
-  if(op){var m=exList(wk);h+='<div class="blist">'+(b.closed?'':'<div class="bl one">Done by hand before Saturday night? Tap them.</div>');
+  if(b.open){var oa=b.w.open_at?new Date(b.w.open_at):null,asof=oa&&!isNaN(oa)?' (as of '+e(oa.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))+')':'';
+    h+='<div class="bl one">'+(b.open.length?'Nothing in the app yet'+asof+': '+e(b.open.map(function(r){return r[1]}).join(', ')):(b.unread?'Every athlete that could be checked has something in the app':'Every athlete has something in the app')+asof+'.')+(b.unread?' Could not check '+b.unread+'.':'')+'</div>'}
+  if(op){var m=exList(wk);h+='<div class="blist">'+(b.closed?'<div class="bl one">Not written by Saturday night:</div>':'<div class="bl one">Done by hand before Saturday night? Tap them.</div>');
     b.w.left.forEach(function(r){var on=m[r[0]]&&m[r[0]].on;
       if(b.closed||r[2])h+='<span class="lf off">'+e(r[1])+'</span>';
       else h+='<button class="lf'+(on?' on':'')+'" data-exc="'+e(wk)+'|'+e(r[0])+'">'+e(r[1])+(on?' &middot; by hand':'')+'</button>'});
@@ -1240,7 +1244,7 @@ function headline(){
     return {c:"lights",t:lab+" finish = "+lv+". "+fmtLeft(left)+" left",sub:sub}}
   if(dow===6)return {c:"off",t:"Off. Go be a dad.",sub:""};
   if((dow===4||dow===5)&&p)return p.need?{c:"prog",t:p.tonight+" tonight keeps 10 left by Sat night",sub:""}:{c:"prog",t:"10 left by Sat night is on. "+p.b.n+" left",sub:""};
-  if(dow===0){var bs=boss(nextMonday());if(bs)return {c:bs.lv?"win":"prog",t:bs.n+" athletes left today",sub:bs.lv?"You hit it: "+bs.lv+".":""}}
+  if(dow===0){var bs=boss(nextMonday());if(bs)return (bs.open&&!bs.now&&!bs.unread)?{c:"win",t:"Every athlete has something in the app",sub:bs.lv?"You hit it: "+bs.lv+".":""}:{c:bs.lv?"win":"prog",t:bs.now+(bs.now===1?" athlete":" athletes")+(bs.open?" left today":" left as of Saturday night"),sub:bs.lv?"You hit it: "+bs.lv+".":""}}
   if(list.length)return {c:"next",t:DAYPLAIN[dow],sub:""};
   return {c:"win",t:"Nothing urgent",sub:""}}
 function nightsStrip(){ // the reason to come back: 14 nights, one glance, and the streak in big
@@ -1432,7 +1436,11 @@ function ringsHTML(){   // both rings: the big number is what is LEFT, the ring 
   if(dc&&dc.total){var done=dc.total-dc.left,wd=dc.day===dk(ed)?'today':'tomorrow';
     h+='<button class="rtile" data-go="next" style="--c:var(--work)">'+ringSVG(done/dc.total*100)+'<div class="rv2"><b>'+dc.left+'</b><span>'+(dc.left?'left on '+wd+'\'s list':wd.charAt(0).toUpperCase()+wd.slice(1)+'\'s list is done')+'</span><small>'+done+' of '+dc.total+' done</small></div></button>'}
   else h+='<button class="rtile" data-go="next" style="--c:var(--work)">'+ringSVG(0)+'<div class="rv2"><span>No list posted for today</span><small>Post it in Slack and it shows here</small></div></button>';
-  if(b&&b.w&&b.w.roster){var left=Math.max(0,b.n),ro=b.w.roster,goal=Math.max(1,ro-10),tr=b.tracksOK;
+  if(b&&b.w&&b.w.roster&&b.open){var lf=b.now,rs=b.w.roster;   // past Saturday night: the live count, the score on its own line
+    h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG((rs-lf-b.unread)/rs*100)+'<div class="rv2"><b>'+lf+'</b><span>'+(lf?(lf===1?'athlete':'athletes')+' left for next week':(b.unread?'left that could be checked':'Every athlete has something in'))+'</span><small>'+(b.unread?'Could not check '+b.unread+(b.unread===1?' athlete':' athletes'):(b.lv?'Saturday night: '+e(b.lv):'Saturday night: '+b.n+' left'))+'</small></div></button>'}
+  else if(b&&b.w&&b.w.roster&&b.closed){   // past Saturday night with no live read: say it is the Saturday number, never the goal line
+    h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG((b.w.roster-Math.max(0,b.n))/b.w.roster*100)+'<div class="rv2"><b>'+Math.max(0,b.n)+'</b><span>left as of Saturday night</span><small>No live count right now</small></div></button>'}
+  else if(b&&b.w&&b.w.roster){var left=Math.max(0,b.n),ro=b.w.roster,goal=Math.max(1,ro-10),tr=b.tracksOK;
     h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG((ro-left)/goal*100)+'<div class="rv2"><b>'+left+'</b><span>athletes left for next week</span><small>'+(left<=10?(tr?'At 10 or fewer and all tracks live':'At 10 or fewer. Tracks '+(b.w.tracks||0)+' of '+TRACKS_NEEDED+' live'):'Goal: 10 or fewer by Saturday night')+'</small></div></button>'}
   else h+='<button class="rtile" data-go="week" style="--c:var(--prog)">'+ringSVG(0)+'<div class="rv2"><span>Athletes left for next week</span><small>No data yet</small></div></button>';
   return h+'</div>'}
