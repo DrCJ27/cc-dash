@@ -426,7 +426,21 @@ async function pbkey(phrase,salt,use){
 async function decrypt(blob,phrase){
   var key=await pbkey(phrase,a2b(blob.salt),"decrypt");
   var pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:a2b(blob.iv)},key,a2b(blob.ct));
+  if(blob.z==="gzip")pt=await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
   return JSON.parse(new TextDecoder().decode(pt));
+}
+// Nov 26 2026: the ticks blob hit its 45,000-character ceiling on Nov 21 and stopped saving. New pages save
+// the same state gzipped (about a third of the size) under kind "flags2" and leave "flags" alone, so a page
+// that cannot read the new format keeps working on the old one and no device is ever locked out.
+var ZOK=typeof CompressionStream==="function"&&typeof DecompressionStream==="function";
+var HQVER="Nov 26";
+async function encryptJSONz(obj,phrase){
+  var raw=new TextEncoder().encode(JSON.stringify(obj));
+  var z=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer());
+  var salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  var key=await pbkey(phrase,salt,"encrypt");
+  var ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},key,z));
+  return {v:2,z:"gzip",salt:b2a(salt),iv:b2a(iv),ct:b2a(ct)};
 }
 async function encryptJSON(obj,phrase){
   var salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
@@ -466,7 +480,16 @@ var SYNCING=null, PUSHING=null, REPUSH=0;
 async function pullMerge(){
   // Merge the store copy INTO local before anything else happens. Returns the store's
   // version stamp so the following write can be refused if someone wrote in between.
-  var r=await hqPost({action:"read_blob",kind:"flags"});
+  var kinds=ZOK?["flags","flags2"]:["flags"],stamp="";
+  for(var ki=0;ki<kinds.length;ki++){
+    var got=await pullOne(kinds[ki]);
+    if(kinds[ki]===(ZOK?"flags2":"flags"))stamp=got;
+  }
+  return stamp;
+}
+async function pullOne(kind){
+  var r=await hqPost({action:"read_blob",kind:kind});
+  if(kind==="flags"&&ZOK&&r.ok&&r.updated&&lsGet("cc-flags-merged-at","")===r.updated)return r.updated||"";
   if(r.ok&&r.data){
     try{
       var rem=await decrypt(JSON.parse(r.data),localStorage.getItem(KEYSTORE));
@@ -478,6 +501,7 @@ async function pullMerge(){
       Object.keys(rem).forEach(function(k){if(KNOWN_KEYS[k])return;ex[k]=deepMerge(ex[k],rem[k])});
       lsSet(EXTRA,ex);
     }catch(x){throw new Error("unreadable")}   // never overwrite what we cannot read (passphrase rotated?)
+    if(kind==="flags"&&ZOK)lsSet("cc-flags-merged-at",r.updated||"");
     return r.updated||"";
   }
   if(r.ok===false&&r.error==="not_found")return "";
@@ -517,9 +541,9 @@ async function pushFlags(knownUpd){
         var gen=PGEN;
         var state=Object.assign({},lsGet(EXTRA,{}),{v:1,ts:Date.now(),flags:lsGet(FLAGS+"todo",{}),
           mine:lsGet(MINE+"todo",[]),ideas:lsGet(IDEAS,[]),nights:lsGet(NIGHTS,{})});
-        var blob=await encryptJSON(state,localStorage.getItem(KEYSTORE));
-        if(JSON.stringify(blob).length>45000){SYNC.state="too big to sync. Ideas are safe on this device. Tell Claude.";SYNC.ok=false;break}
-        var r=await hqPost({action:"blob",kind:"flags",data:JSON.stringify(blob),if_updated:upd,
+        var blob=ZOK?await encryptJSONz(state,localStorage.getItem(KEYSTORE)):await encryptJSON(state,localStorage.getItem(KEYSTORE));
+        if(JSON.stringify(blob).length>45000){SYNC.state="Too full to save. Ticks and ideas are kept on this screen only. Tell Claude.";SYNC.ok=false;break}
+        var r=await hqPost({action:"blob",kind:ZOK?"flags2":"flags",data:JSON.stringify(blob),if_updated:upd,
           meta:{n:Object.keys(state.flags).length,mine:state.mine.length,ideas:state.ideas.length}});
         if(r.ok){if(gen===PGEN){lsSet("cc-dirty",0);SYNC.state="synced"}else REPUSH=1;SYNC.ok=true;break}
         if(r.error==="conflict"&&attempt===0){upd=await pullMerge();continue}
@@ -640,6 +664,7 @@ function sysHTML(){
   else if(GLANCE&&GLANCE.last_heartbeat){var m=Math.round((Date.now()-new Date(GLANCE.last_heartbeat).getTime())/60000);
     rows.push(m<2?'Synced just now':(m<120?'Synced '+m+' minutes ago':'<span class="amber">Mac asleep or offline for '+Math.round(m/60)+' hours</span>'))}
   else rows.push(HQ?'Connecting':'Waiting for the first update');
+  rows.push(ZOK?'New save: on':'New save: off, this screen can\'t');
   return '<div class="sys" id="sys"><span>'+rows.join('</span><span>')+'</span><button id="lookswitch" style="background:none;border:0;color:inherit;font:inherit;text-decoration:underline;padding:0;min-height:40px">'+(LB?'Old look':'New look')+'</button></div>';
 }
 function drawSys(){var s=$("sys");if(s)s.outerHTML=sysHTML();var ds=$("discsync");if(ds)ds.textContent=discSyncText()}
